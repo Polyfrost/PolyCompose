@@ -8,6 +8,7 @@ import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 //? if > 1.8.9 {
@@ -96,6 +97,8 @@ fun McItemIcon(
     alpha: Float = 1f,
 ) {
     val handle = rememberItemIconHandle(stack, decorations)
+    val density = LocalDensity.current
+    SideEffect { McItemAtlas.requestSize(handle, with(density) { size.toPx() }) }
     Box(
         modifier
             .size(size)
