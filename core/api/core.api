@@ -718,6 +718,10 @@ public final class org/polyfrost/compose/host/ComposeOptionsKt {
 	public static final fun getLocalComposeOptions ()Landroidx/compose/runtime/ProvidableCompositionLocal;
 }
 
+public final class org/polyfrost/compose/host/ContentScaleKt {
+	public static final fun getLocalContentScale ()Landroidx/compose/runtime/ProvidableCompositionLocal;
+}
+
 public abstract interface class org/polyfrost/compose/host/GameInputLayer {
 	public static final field ABOVE_HUD_LAYERS I
 	public static final field BELOW_HUD_LAYERS I

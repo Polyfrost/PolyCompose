@@ -379,8 +379,13 @@ internal object McItemAtlas {
         return entry
     }
 
-    private fun renderPx(ctx: RenderContext, size: Float): Int {
-        return ceil(size * ctx.deviceScale() - 0.01f).toInt().coerceAtLeast(1)
+    private fun renderPx(ctx: RenderContext, size: Float): Int = renderPx(size * ctx.deviceScale())
+
+    private fun renderPx(devicePx: Float): Int = ceil(devicePx - 0.01f).toInt().coerceAtLeast(1)
+
+    fun requestSize(handle: McItemIconHandle, devicePx: Float) {
+        val entry = handle as? IconEntry ?: return
+        if (entry.requestedSizePx == 0) entry.setRenderSizePx(renderPx(devicePx))
     }
 
     private fun ensureHooks() {
@@ -535,7 +540,7 @@ internal object McItemAtlas {
         if (active.none { it !== entry && it.failedStack === variant }) failedVariants.removeAll { it === variant }
     }
 
-    private fun renderAll() {
+    fun renderAll() {
         if (!available.value || renderingFailed) return
         try {
             reconcileTopology()
