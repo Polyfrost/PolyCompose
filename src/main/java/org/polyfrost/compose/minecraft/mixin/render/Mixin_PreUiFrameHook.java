@@ -18,4 +18,11 @@ public class Mixin_PreUiFrameHook {
         McFrameHooks.runBeforeUi();
     }
 
+    //? if >= 26.1 {
+    @Inject(method = "extract", at = @At("HEAD"))
+    private void polycompose$beforeExtract(CallbackInfo ci) {
+        McFrameHooks.runBeforeExtract();
+    }
+    //?}
+
 }

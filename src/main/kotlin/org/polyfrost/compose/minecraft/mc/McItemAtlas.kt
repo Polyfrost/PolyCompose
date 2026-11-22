@@ -399,6 +399,7 @@ internal object McItemAtlas {
     private var lastViewportW = 0
     private var lastViewportH = 0
     private var frameHook: AutoCloseable? = null
+    private var extractHook: AutoCloseable? = null
     private var tickHook: AutoCloseable? = null
     private var reloadHook: AutoCloseable? = null
     private var initializationStarted = false
@@ -425,6 +426,8 @@ internal object McItemAtlas {
 
     private fun ensureHooks() {
         if (frameHook == null) frameHook = McFrameHooks.beforeUi(::renderAll)
+        // on 26.1+ HUDs are drawn before beforeUi, so the atlas also has to be ready here
+        if (extractHook == null) extractHook = McFrameHooks.beforeExtract(::renderAll)
         if (tickHook == null) tickHook = HostEvents.onClientTick(::onTick)
         if (reloadHook == null) reloadHook = HostEvents.onResourcesReloaded(::clearCaches)
     }
@@ -432,6 +435,8 @@ internal object McItemAtlas {
     private fun releaseHooks() {
         frameHook?.close()
         frameHook = null
+        extractHook?.close()
+        extractHook = null
         tickHook?.close()
         tickHook = null
         reloadHook?.close()

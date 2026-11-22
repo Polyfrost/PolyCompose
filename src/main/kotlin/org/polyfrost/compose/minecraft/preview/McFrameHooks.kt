@@ -14,6 +14,28 @@ object McFrameHooks {
         return AutoCloseable { beforeUi -= callback }
     }
 
+    private val beforeExtract = CopyOnWriteArrayList<Runnable>()
+    private var extracting = false
+
+    /** For 26.1+: like [beforeUi], but runs before GUI extraction, which happens before rendering */
+    @JvmStatic
+    fun beforeExtract(callback: Runnable): AutoCloseable {
+        beforeExtract += callback
+        return AutoCloseable { beforeExtract -= callback }
+    }
+
+    @ApiStatus.Internal
+    @JvmStatic
+    fun runBeforeExtract() {
+        if (beforeExtract.isEmpty() || extracting) return
+        extracting = true
+        try {
+            HostCallbacks.each(beforeExtract, "A pre-extract frame hook") { it.run() }
+        } finally {
+            extracting = false
+        }
+    }
+
     @JvmStatic
     val hasBeforeUiCallbacks: Boolean
         get() = beforeUi.isNotEmpty()
