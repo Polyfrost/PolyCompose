@@ -72,6 +72,7 @@ public class PolyComposeMixinPlugin implements IMixinConfigPlugin {
         //? if >= 26.1 {
         mixins.add("blaze3d.GpuDeviceAccessor");
         mixins.add("blaze3d.GlDeviceAccessor");
+        mixins.add("render.Mixin_ProjectionOrtho");
         //?}
         //? if >= 1.21.8 {
         mixins.add("render.GameRendererAccessor");

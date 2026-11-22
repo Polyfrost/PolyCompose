@@ -15,7 +15,10 @@ import net.minecraft.client.renderer.GameRenderer;
 //?}
 
 //? if >= 26.1 {
+import com.llamalad7.mixinextras.sugar.Share;
+import com.llamalad7.mixinextras.sugar.ref.LocalFloatRef;
 import org.objectweb.asm.Opcodes;
+import org.spongepowered.asm.mixin.injection.ModifyArg;
 //?}
 
 //? if < 26.2 {
@@ -60,6 +63,48 @@ public class Mixin_GuiRendererLegacyTarget {
     private int polycompose$modifyGuiTargetHeight(int original) {
         RenderTarget override = GuiTargetRedirect.target;
         return override != null ? override.height : original;
+    }
+
+    @ModifyArg(
+            method = "draw",
+            at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/Projection;setupOrtho(FFFFZ)V"),
+            index = 2,
+            order = 900
+    )
+    private float polycompose$captureProjectionWidth(float original, @Share("projectionWidth") LocalFloatRef width) {
+        width.set(original);
+        return original;
+    }
+
+    @ModifyArg(
+            method = "draw",
+            at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/Projection;setupOrtho(FFFFZ)V"),
+            index = 2,
+            order = 1100
+    )
+    private float polycompose$restoreProjectionWidth(float original, @Share("projectionWidth") LocalFloatRef width) {
+        return GuiTargetRedirect.target != null ? width.get() : original;
+    }
+
+    @ModifyArg(
+            method = "draw",
+            at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/Projection;setupOrtho(FFFFZ)V"),
+            index = 3,
+            order = 900
+    )
+    private float polycompose$captureProjectionHeight(float original, @Share("projectionHeight") LocalFloatRef height) {
+        height.set(original);
+        return original;
+    }
+
+    @ModifyArg(
+            method = "draw",
+            at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/Projection;setupOrtho(FFFFZ)V"),
+            index = 3,
+            order = 1100
+    )
+    private float polycompose$restoreProjectionHeight(float original, @Share("projectionHeight") LocalFloatRef height) {
+        return GuiTargetRedirect.target != null ? height.get() : original;
     }
     //? } else {
     /*@ModifyExpressionValue(
