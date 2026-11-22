@@ -1,5 +1,6 @@
 package org.polyfrost.compose.minecraft.render.gl
 
+import androidx.compose.runtime.snapshots.SnapshotStateObserver
 import com.mojang.blaze3d.pipeline.RenderTarget
 import net.minecraft.client.Minecraft
 import net.minecraft.client.renderer.texture.AbstractTexture
@@ -262,6 +263,7 @@ object GlHost {
         }
         *///?}
         val rt = hudTarget ?: return
+        if (liveStale) repaintHud(rt)
         val w = rt.width
         val h = rt.height
         val guiScale = client.window.guiScale.toFloat()
@@ -799,6 +801,18 @@ object GlHost {
         return renderer
     }
 
+    // live canvases only run while the HUD target is painted, so repaint it when state they read changes
+    private val liveReads = SnapshotStateObserver { it() }.also { it.start() }
+    @Volatile private var liveStale = false
+    private val onLiveStateChanged: (Any) -> Unit = { liveStale = true }
+
+    private fun paintHud(fbo: Int, w: Int, h: Int) {
+        liveStale = false
+        liveReads.observeReads(this, onLiveStateChanged) {
+            GlRenderer.Layer.draw(fbo, w, h, topDown = true, clear = true, stableLayer, volatileLayer)
+        }
+    }
+
     fun drawHudGl(draw: (RenderContext, RenderContext?) -> Unit): Boolean {
         //? if = 1.21.1 {
         /*if (vanillaPipeline) {
@@ -835,7 +849,7 @@ object GlHost {
             draw(RenderContext(stable), RenderContext(volatile))
             stableLayer.take(stable)
             volatileLayer.take(volatile)
-            GlRenderer.Layer.draw(fbo, rt.width, rt.height, topDown = true, clear = true, stableLayer, volatileLayer)
+            paintHud(fbo, rt.width, rt.height)
             return true
         } catch (e: Throwable) {
             HostErrors.warn("GlHost.drawHudGl() error", e)
@@ -844,6 +858,19 @@ object GlHost {
             gl.restore()
         }
         //?}
+    }
+
+    private fun repaintHud(rt: RenderTarget) {
+        val fbo = RenderTargetFbo.getFboId(rt)
+        if (fbo <= 0) return
+        gl.capture()
+        try {
+            paintHud(fbo, rt.width, rt.height)
+        } catch (e: Throwable) {
+            HostErrors.warn("GlHost.repaintHud() error", e)
+        } finally {
+            gl.restore()
+        }
     }
 
     private fun resolveHudTarget(): RenderTarget? {
