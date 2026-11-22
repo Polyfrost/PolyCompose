@@ -2,6 +2,8 @@ package org.polyfrost.compose.minecraft.font
 
 import com.google.gson.JsonObject
 import java.io.ByteArrayInputStream
+import java.util.Locale
+import java.util.Optional
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.zip.ZipInputStream
@@ -22,10 +24,8 @@ import org.polyfrost.compose.minecraft.platform.RenderThread
 import org.slf4j.LoggerFactory
 //? if > 1.8.9 {
 import net.minecraft.resources.Identifier
-//?} else {
-/*import java.util.Locale
-import net.ornithemc.osl.core.api.util.NamespacedIdentifiers
-*///?}
+//?} else
+//import net.ornithemc.osl.core.api.util.NamespacedIdentifiers
 
 // below 1.21.11 the tessellator can't draw with the game's font, so its providers are read from the active resources instead
 internal object McResourceFont {
@@ -41,17 +41,43 @@ internal object McResourceFont {
 
     private class Unihex(val rows: IntArray, val left: Int, val right: Int)
 
-    private class Layer(val glyphs: Map<Int, McGlyph>, val unihex: Map<Int, Unihex>, val ttf: Ttf?) {
+    private class Layer(
+        val glyphs: Map<Int, McGlyph>,
+        val unihex: Map<Int, Unihex>,
+        val ttf: Ttf? = null,
+        val legacy: LegacyUnicode? = null,
+    ) {
         private val baked = ConcurrentHashMap<Int, McGlyph>()
 
         fun glyph(cp: Int): McGlyph? {
             if (ttf != null) return ttf.glyph(cp)
+            if (legacy != null) return baked[cp] ?: legacy.glyph(cp)?.let { baked.putIfAbsent(cp, it) ?: it }
             glyphs[cp]?.let { return it }
             if (cp !in unihex) return null
             baked[cp]?.let { return it }
             val block = bakeBlock(cp and UNIHEX_BLOCK_MASK.inv(), unihex)
             for ((code, g) in block) baked.putIfAbsent(code, g)
             return baked[cp]
+        }
+    }
+
+    private class LegacyUnicode(val sizes: ByteArray, val readPage: (Int) -> PolyBitmap?) {
+        private val pages = ConcurrentHashMap<Int, Optional<PolyBitmap>>()
+
+        fun glyph(cp: Int): McGlyph? {
+            val size = sizes.getOrNull(cp)?.toInt()?.and(0xFF) ?: return null
+            if (size == 0) return null
+            val start = size ushr 4
+            val columns = (size and 15) + 1 - start
+            if (columns <= 0) return null
+
+            val page = pages.computeIfAbsent(cp ushr 8) { Optional.ofNullable(readPage(it)) }.orElse(null) ?: return null
+            val x = (cp and 15) * 16 + start
+            val y = (cp ushr 4 and 15) * 16
+            return McGlyph(
+                page, x / 256f, y / 256f, (x + columns) / 256f, (y + 16) / 256f,
+                0f, columns / 2f, 8f, columns / 2f + 1f, 0.5f,
+            )
         }
     }
 
@@ -177,7 +203,7 @@ internal object McResourceFont {
         var glyphs = HashMap<Int, McGlyph>()
         var unihex = HashMap<Int, Unihex>()
         fun flush() {
-            if (glyphs.isNotEmpty() || unihex.isNotEmpty()) layers += Layer(glyphs, unihex, null)
+            if (glyphs.isNotEmpty() || unihex.isNotEmpty()) layers += Layer(glyphs, unihex)
             glyphs = HashMap()
             unihex = HashMap()
         }
@@ -194,6 +220,10 @@ internal object McResourceFont {
                     }
                     "bitmap" -> loadBitmap(rm, provider).forEach { (cp, g) -> if (unclaimed(cp)) glyphs[cp] = g }
                     "unihex" -> loadUnihex(rm, provider).forEach { (cp, u) -> if (unclaimed(cp)) unihex[cp] = u }
+                    "legacy_unicode" -> loadLegacyUnicode(rm, provider)?.let {
+                        flush()
+                        layers += Layer(emptyMap(), emptyMap(), legacy = it)
+                    }
                     "ttf" -> loadTtf(rm, provider)?.let {
                         flush()
                         layers += Layer(emptyMap(), emptyMap(), it)
@@ -203,6 +233,16 @@ internal object McResourceFont {
         }
         flush()
         return if (layers.isEmpty()) null else Font(layers)
+    }
+
+    private fun loadLegacyUnicode(rm: ResourceManager, provider: JsonObject): LegacyUnicode? {
+        val sizesPath = provider.get("sizes")?.asString ?: return null
+        val template = provider.get("template")?.asString ?: return null
+        val sizes = read(rm, sizesPath, "") ?: return null
+        return LegacyUnicode(sizes) { page ->
+            val path = template.replace("%s", String.format(Locale.ROOT, "%02x", page))
+            read(rm, path, "textures/")?.let(PolyBitmap::decode)
+        }
     }
 
     private fun loadTtf(rm: ResourceManager, provider: JsonObject): Ttf? {
