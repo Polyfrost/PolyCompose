@@ -67,6 +67,8 @@ public class PolyComposeMixinPlugin implements IMixinConfigPlugin {
         //mixins.add("render.Mixin_SkiaFrame");
         //? if > 1.8.9 && < 1.21.9
         //mixins.add("profile.KeyMappingAccessor");
+        //? if = 1.8.9
+        //mixins.add("render.HttpTextureAccessor");
         //? if >= 1.21.10
         mixins.add("render.Mixin_FramePresentHooks");
         //? if >= 26.1 {

@@ -45,6 +45,10 @@ import org.lwjgl.opengl.GL11
 
 //? if > 1.8.9
 import net.minecraft.client.resources.DefaultPlayerSkin
+//? if = 1.8.9 {
+/*import net.minecraft.client.render.texture.HttpTexture
+import org.polyfrost.compose.minecraft.mixin.render.HttpTextureAccessor
+*///?}
 
 enum class McHeadStyle {
     FACE,
@@ -160,6 +164,7 @@ object McPlayerFaces {
 
     @JvmStatic
     fun defaultLayers(id: UUID): McSkinLayers? {
+        ensureHooks()
         val (namespace, path) = defaultSkin(id)
         val key = "$namespace:$path"
         synchronized(defaults) { if (defaults.containsKey(key)) return defaults[key] }
@@ -170,6 +175,7 @@ object McPlayerFaces {
 
     @JvmStatic
     fun layers(texture: String): McSkinLayersResult {
+        ensureHooks()
         val now = System.nanoTime()
         synchronized(textures) {
             val known = textures[texture]
@@ -177,6 +183,7 @@ object McPlayerFaces {
         }
         if (!RenderThread.isCurrent()) return McSkinLayersResult.Pending
         val location = parse(texture) ?: return McSkinLayersResult.Unreadable
+        if (downloading(location)) return McSkinLayersResult.Pending
         val bitmap = readTexture(location) ?: McResources.image(location.namespace, location.path)
         val result = bitmap?.let { buildLayers(texture, it, opaqueFace = false) }?.let(McSkinLayersResult::Loaded)
             ?: McSkinLayersResult.Unreadable
@@ -252,8 +259,8 @@ object McPlayerFaces {
         val key = location?.toString()
         if (key != null && key == entry.clientKey) return
         val read = when {
-            location == null -> null
-            key == defaultKey(entry.id) -> defaultLayers(entry.id)
+            location == null || downloading(location) -> null
+            key == defaultKey(entry.id) -> defaultLayers(entry.id).also { entry.custom = null }
             else -> runCatching { readTexture(location) ?: McResources.image(location.namespace, location.path) }.getOrNull()
                 ?.let { buildLayers(key!!, it, opaqueFace = true) }
                 ?.also { entry.custom = it }
@@ -371,7 +378,7 @@ object McPlayerFaces {
         //?} else
         //return skin.texture()
         //?} else {
-        /*return mc.networkHandler?.getOnlinePlayer(id)?.skinTexture
+        /*return mc.player?.takeIf { it.getUuid() == id }?.skinTextureLocation ?: mc.networkHandler?.getOnlinePlayer(id)?.skinTexture
         *///?}
     }
 
@@ -386,6 +393,15 @@ object McPlayerFaces {
         return location.namespace to location.path
         //?} else
         //return McResources.DEFAULT_NAMESPACE to if ((id.hashCode() and 1) == 1) "textures/entity/alex.png" else "textures/entity/steve.png"
+    }
+
+    private fun downloading(location: Identifier): Boolean {
+        //? if = 1.8.9 {
+        /*val texture = Minecraft.getInstance().textureManager.getTexture(location) as? HttpTexture ?: return false
+        texture.getGlId()
+        return !(texture as HttpTextureAccessor).`polycompose$isUploaded`()
+        *///?} else
+        return false
     }
 
     private fun readTexture(location: Identifier): PolyBitmap? {
