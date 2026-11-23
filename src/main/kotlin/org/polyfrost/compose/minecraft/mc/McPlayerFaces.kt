@@ -58,16 +58,17 @@ class McSkinLayers internal constructor(
         if (!hasHat) return@lazy face
         val out = face.pixels.copyOf()
         val top = hat.pixels
-        for (i in 0 until out.size / 4) {
-            val o = i * 4
-            val alpha = top[o + 3].toInt() and 0xFF
-            if (alpha == 0) continue
+        for (o in 0 until out.size step 4) {
+            val ta = top[o + 3].toInt() and 0xFF
+            if (ta == 0) continue
+            val ba = (out[o + 3].toInt() and 0xFF) * (255 - ta)
+            val a = ta * 255 + ba
             for (c in 0 until 3) {
-                val b = out[o + c].toInt() and 0xFF
                 val t = top[o + c].toInt() and 0xFF
-                out[o + c] = ((t * alpha + b * (255 - alpha)) / 255).toByte()
+                val b = out[o + c].toInt() and 0xFF
+                out[o + c] = ((t * ta * 255 + b * ba + a / 2) / a).toByte()
             }
-            out[o + 3] = 0xFF.toByte()
+            out[o + 3] = ((a + 127) / 255).toByte()
         }
         PolyBitmap(face.width, face.height, out)
     }
@@ -189,8 +190,7 @@ object McPlayerFaces {
     @JvmOverloads
     fun draw(ctx: RenderContext, layers: McSkinLayers, x: Float, y: Float, w: Float, h: Float, hat: Boolean = true) {
         if (w <= 0f || h <= 0f) return
-        ctx.image(layers.face, x, y, w, h, FilterQuality.None)
-        if (hat && layers.hasHat) ctx.image(layers.hat, x, y, w, h, FilterQuality.None)
+        ctx.image(if (hat && layers.hasHat) layers.flattened else layers.face, x, y, w, h, FilterQuality.None)
     }
 
     @JvmStatic
