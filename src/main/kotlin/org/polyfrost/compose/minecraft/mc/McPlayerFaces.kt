@@ -233,7 +233,9 @@ object McPlayerFaces {
         val location = runCatching { clientSkin(entry.id) }.getOrNull()
         val key = location?.toString()
         if (key == entry.clientKey && (entry.client != null || key == null)) return
-        val layers = location?.let { runCatching { readTexture(it) }.getOrNull() }?.let { buildLayers(key!!, it, opaqueFace = true) }
+        val layers = if (key == defaultKey(entry.id)) defaultLayers(entry.id)
+        else location?.let { runCatching { readTexture(it) ?: McResources.image(it.namespace, it.path) }.getOrNull() }
+            ?.let { buildLayers(key!!, it, opaqueFace = true) }
         val changed = entry.clientKey != key || entry.client !== layers
         entry.clientKey = key
         entry.client = layers
@@ -346,10 +348,11 @@ object McPlayerFaces {
         //?} else
         //return skin.texture()
         //?} else {
-        /*val info = mc.networkHandler?.getOnlinePlayer(id) ?: return null
-        return if (info.hasSkinTexture()) info.skinTexture else null
+        /*return mc.networkHandler?.getOnlinePlayer(id)?.skinTexture
         *///?}
     }
+
+    private fun defaultKey(id: UUID): String = defaultSkin(id).let { (namespace, path) -> "$namespace:$path" }
 
     private fun defaultSkin(id: UUID): Pair<String, String> {
         //? if > 1.8.9 {

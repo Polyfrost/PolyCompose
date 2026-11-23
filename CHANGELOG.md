@@ -1,5 +1,9 @@
 # Changelog
 
+## [Unreleased]
+
+- Fixed player faces downloading the skin of players on a default skin even though they were in the player list
+
 ## [3.0.6]
 
 - Fixed hotbar items disappearing with VanillaHUD when a GUI scale mod such as Precise GUI Scale or FineScale is used on 26.1 and newer
