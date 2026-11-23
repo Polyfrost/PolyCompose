@@ -9,5 +9,8 @@ import org.spongepowered.asm.mixin.gen.Accessor;
 public interface HttpTextureAccessor {
     @Accessor("uploaded")
     boolean polycompose$isUploaded();
+
+    @Accessor("downloader")
+    Thread polycompose$getDownloader();
 }
 *///?}

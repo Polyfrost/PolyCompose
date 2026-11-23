@@ -3,6 +3,7 @@ package org.polyfrost.compose.minecraft.mc
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.snapshots.Snapshot
@@ -19,6 +20,7 @@ import java.nio.charset.StandardCharsets
 import java.util.Base64
 import java.util.UUID
 import java.util.concurrent.TimeUnit
+import kotlinx.coroutines.delay
 import net.minecraft.client.Minecraft
 import net.minecraft.resources.Identifier
 import org.polyfrost.compose.backend.drawPoly
@@ -124,6 +126,7 @@ object McPlayerFaces {
     private val textures = lru<String, TextureLayers>()
     private var tickHook: AutoCloseable? = null
     private var reloadHook: AutoCloseable? = null
+    @Volatile private var hooksQueued = false
     private var ticks = 0
 
     @JvmStatic
@@ -183,7 +186,11 @@ object McPlayerFaces {
         }
         if (!RenderThread.isCurrent()) return McSkinLayersResult.Pending
         val location = parse(texture) ?: return McSkinLayersResult.Unreadable
-        if (downloading(location)) return McSkinLayersResult.Pending
+        when (download(location)) {
+            Download.PENDING -> return McSkinLayersResult.Pending
+            Download.FAILED -> return McSkinLayersResult.Unreadable.also { synchronized(textures) { textures[texture] = TextureLayers(it, now) } }
+            Download.DONE -> Unit
+        }
         val bitmap = readTexture(location) ?: McResources.image(location.namespace, location.path)
         val result = bitmap?.let { buildLayers(texture, it, opaqueFace = false) }?.let(McSkinLayersResult::Loaded)
             ?: McSkinLayersResult.Unreadable
@@ -232,7 +239,16 @@ object McPlayerFaces {
     }
 
     private fun ensureHooks() {
-        if (!RenderThread.isCurrent()) return
+        if (!RenderThread.isCurrent()) {
+            if ((reloadHook == null || tickHook == null) && !hooksQueued) {
+                hooksQueued = true
+                RenderThread.schedule {
+                    hooksQueued = false
+                    ensureHooks()
+                }
+            }
+            return
+        }
         if (reloadHook == null) reloadHook = HostEvents.onResourcesReloaded(::invalidate)
         if (tickHook == null) tickHook = HostEvents.onClientTick(::onTick)
     }
@@ -259,8 +275,8 @@ object McPlayerFaces {
         val key = location?.toString()
         if (key != null && key == entry.clientKey) return
         val read = when {
-            location == null || downloading(location) -> null
-            key == defaultKey(entry.id) -> defaultLayers(entry.id).also { entry.custom = null }
+            location == null || download(location) != Download.DONE -> null
+            key == defaultKey(entry.id) -> defaultLayers(entry.id).also { forgetCustom(entry) }
             else -> runCatching { readTexture(location) ?: McResources.image(location.namespace, location.path) }.getOrNull()
                 ?.let { buildLayers(key!!, it, opaqueFace = true) }
                 ?.also { entry.custom = it }
@@ -270,6 +286,14 @@ object McPlayerFaces {
         if (layers === entry.client) return
         entry.client = layers
         if (layers != null || entry.fetched == null) bump()
+    }
+
+    private fun forgetCustom(entry: Entry) {
+        entry.custom = null
+        if (entry.fetched == null || entry.fetching) return
+        entry.fetched = null
+        entry.settled = false
+        entry.attempts = 0
     }
 
     private fun ensureFetch(entry: Entry) {
@@ -395,13 +419,18 @@ object McPlayerFaces {
         //return McResources.DEFAULT_NAMESPACE to if ((id.hashCode() and 1) == 1) "textures/entity/alex.png" else "textures/entity/steve.png"
     }
 
-    private fun downloading(location: Identifier): Boolean {
+    private enum class Download { DONE, PENDING, FAILED }
+
+    private fun download(location: Identifier): Download {
         //? if = 1.8.9 {
-        /*val texture = Minecraft.getInstance().textureManager.getTexture(location) as? HttpTexture ?: return false
+        /*val texture = Minecraft.getInstance().textureManager.getTexture(location) as? HttpTexture ?: return Download.DONE
         texture.getGlId()
-        return !(texture as HttpTextureAccessor).`polycompose$isUploaded`()
+        val access = texture as HttpTextureAccessor
+        if (access.`polycompose$isUploaded`()) return Download.DONE
+        val downloader = access.`polycompose$getDownloader`()
+        return if (downloader == null || downloader.isAlive) Download.PENDING else Download.FAILED
         *///?} else
-        return false
+        return Download.DONE
     }
 
     private fun readTexture(location: Identifier): PolyBitmap? {
@@ -508,6 +537,18 @@ object McPlayerFaces {
     }
 }
 
+private const val FACE_REFRESH_MS = 1000L
+
+@Composable
+private fun KeepFaceFresh(id: UUID?) {
+    LaunchedEffect(id) {
+        while (true) {
+            delay(FACE_REFRESH_MS)
+            McPlayerFaces.layers(id)
+        }
+    }
+}
+
 @Composable
 fun McPlayerFace(
     id: UUID?,
@@ -515,6 +556,7 @@ fun McPlayerFace(
     size: Dp = 16.dp,
     hat: Boolean = true,
 ) {
+    KeepFaceFresh(id)
     Box(
         modifier
             .size(size)
@@ -545,6 +587,7 @@ fun NodeMcPlayerFace(
     modifier: PolyModifier = PolyModifier,
     hat: Boolean = true,
 ) {
+    KeepFaceFresh(id)
     val revision = McPlayerFaces.revision
     val onDraw: RenderContext.(Float, Float, Float, Float) -> Unit = remember(revision, id, hat) {
         { x, y, w, h ->
@@ -563,6 +606,7 @@ fun McPlayerFace(
     size: Dp = 16.dp,
     flip: Boolean = false,
 ) {
+    KeepFaceFresh(id)
     Box(
         modifier
             .size(size)
@@ -596,6 +640,7 @@ fun NodeMcPlayerFace(
     modifier: PolyModifier = PolyModifier,
     flip: Boolean = false,
 ) {
+    KeepFaceFresh(id)
     val revision = McPlayerFaces.revision
     val onDraw: RenderContext.(Float, Float, Float, Float) -> Unit = remember(revision, id, style, flip) {
         { x, y, w, h ->
