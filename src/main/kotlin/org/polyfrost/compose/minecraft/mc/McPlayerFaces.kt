@@ -106,6 +106,7 @@ object McPlayerFaces {
         var attempts = 0
         var clientKey: String? = null
         var client: McSkinLayers? = null
+        var custom: McSkinLayers? = null
         var clientCheckedAt = 0L
         @Volatile var lastUsed = 0L
     }
@@ -232,14 +233,19 @@ object McPlayerFaces {
         entry.clientCheckedAt = now
         val location = runCatching { clientSkin(entry.id) }.getOrNull()
         val key = location?.toString()
-        if (key == entry.clientKey && (entry.client != null || key == null)) return
-        val layers = if (key == defaultKey(entry.id)) defaultLayers(entry.id)
-        else location?.let { runCatching { readTexture(it) ?: McResources.image(it.namespace, it.path) }.getOrNull() }
-            ?.let { buildLayers(key!!, it, opaqueFace = true) }
-        val changed = entry.clientKey != key || entry.client !== layers
-        entry.clientKey = key
+        if (key != null && key == entry.clientKey) return
+        val read = when {
+            location == null -> null
+            key == defaultKey(entry.id) -> defaultLayers(entry.id)
+            else -> runCatching { readTexture(location) ?: McResources.image(location.namespace, location.path) }.getOrNull()
+                ?.let { buildLayers(key!!, it, opaqueFace = true) }
+                ?.also { entry.custom = it }
+        }
+        entry.clientKey = if (read != null) key else null
+        val layers = read ?: entry.custom
+        if (layers === entry.client) return
         entry.client = layers
-        if (changed && (layers != null || entry.fetched == null)) bump()
+        if (layers != null || entry.fetched == null) bump()
     }
 
     private fun ensureFetch(entry: Entry) {

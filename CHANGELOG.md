@@ -3,6 +3,7 @@
 ## [Unreleased]
 
 - Fixed player faces downloading the skin of players on a default skin even though they were in the player list
+- Fixed player faces downloading a player's skin again after they left the player list
 
 ## [3.0.6]
 
