@@ -28,6 +28,7 @@ import org.polyfrost.compose.composables.size
 import org.polyfrost.compose.minecraft.platform.BackgroundTasks
 import org.polyfrost.compose.minecraft.platform.HostEvents
 import org.polyfrost.compose.minecraft.platform.RenderThread
+import org.polyfrost.compose.mc.McHeadBake
 import org.polyfrost.compose.render.FilterQuality
 import org.polyfrost.compose.render.PolyBitmap
 import org.polyfrost.compose.render.RenderContext
@@ -45,6 +46,12 @@ import org.lwjgl.opengl.GL11
 //? if > 1.8.9
 import net.minecraft.client.resources.DefaultPlayerSkin
 
+enum class McHeadStyle {
+    FACE,
+    FLAT,
+    LAYERED,
+}
+
 class McSkinLayers internal constructor(
     val texture: String,
     val face: PolyBitmap,
@@ -54,23 +61,14 @@ class McSkinLayers internal constructor(
     val size: Int
         get() = face.width
 
-    val flattened: PolyBitmap by lazy {
-        if (!hasHat) return@lazy face
-        val out = face.pixels.copyOf()
-        val top = hat.pixels
-        for (o in 0 until out.size step 4) {
-            val ta = top[o + 3].toInt() and 0xFF
-            if (ta == 0) continue
-            val ba = (out[o + 3].toInt() and 0xFF) * (255 - ta)
-            val a = ta * 255 + ba
-            for (c in 0 until 3) {
-                val t = top[o + c].toInt() and 0xFF
-                val b = out[o + c].toInt() and 0xFF
-                out[o + c] = ((t * ta * 255 + b * ba + a / 2) / a).toByte()
-            }
-            out[o + 3] = ((a + 127) / 255).toByte()
-        }
-        PolyBitmap(face.width, face.height, out)
+    val layered: PolyBitmap by lazy { if (hasHat) McHeadBake.layered(face, hat) else face }
+
+    val flattened: PolyBitmap by lazy { if (hasHat) McHeadBake.flat(face, hat) else face }
+
+    fun bitmap(style: McHeadStyle): PolyBitmap = when {
+        !hasHat || style == McHeadStyle.FACE -> face
+        style == McHeadStyle.FLAT -> flattened
+        else -> layered
     }
 }
 
@@ -191,6 +189,25 @@ object McPlayerFaces {
     fun draw(ctx: RenderContext, layers: McSkinLayers, x: Float, y: Float, w: Float, h: Float, hat: Boolean = true) {
         if (w <= 0f || h <= 0f) return
         ctx.image(if (hat && layers.hasHat) layers.flattened else layers.face, x, y, w, h, FilterQuality.None)
+    }
+
+    @JvmStatic
+    @JvmOverloads
+    fun drawHead(
+        ctx: RenderContext,
+        layers: McSkinLayers,
+        x: Float,
+        y: Float,
+        size: Float,
+        style: McHeadStyle = McHeadStyle.FLAT,
+        flip: Boolean = false,
+        tint: Int = -1,
+    ) {
+        if (size <= 0f || tint ushr 24 == 0) return
+        val overhang = if (style == McHeadStyle.LAYERED && layers.hasHat) size / 16f else 0f
+        val side = size + 2f * overhang
+        val v0 = if (flip) 1f else 0f
+        ctx.renderer.image(layers.bitmap(style), x - overhang, y - overhang, side, side, 0f, v0, 1f, 1f - v0, tint, FilterQuality.None)
     }
 
     @JvmStatic
@@ -456,7 +473,9 @@ object McPlayerFaces {
             }
             return PolyBitmap(size, size, out)
         }
-        return McSkinLayers(texture, layer(8, opaqueFace, true), layer(40, false, hasHat), hasHat)
+        val face = layer(8, opaqueFace, true)
+        val hat = layer(40, false, hasHat)
+        return McSkinLayers(texture, face, hat, hasHat && (3 until hat.pixels.size step 4).any { hat.pixels[it] != 0.toByte() })
     }
 
     private fun isOpaque(skin: PolyBitmap, x0: Int, y0: Int, x1: Int, y1: Int): Boolean {
@@ -515,6 +534,58 @@ fun NodeMcPlayerFace(
         { x, y, w, h ->
             val layers = McPlayerFaces.layers(id)
             if (layers != null) McPlayerFaces.draw(this, layers, x, y, w, h, hat)
+        }
+    }
+    NodeCanvas(modifier.size(size, size), onDraw = onDraw)
+}
+
+@Composable
+fun McPlayerFace(
+    id: UUID?,
+    style: McHeadStyle,
+    modifier: Modifier = Modifier,
+    size: Dp = 16.dp,
+    flip: Boolean = false,
+) {
+    Box(
+        modifier
+            .size(size)
+            .drawBehind {
+                McPlayerFaces.revision
+                val layers = McPlayerFaces.layers(id) ?: return@drawBehind
+                val side = minOf(this.size.width, this.size.height)
+                val x = (this.size.width - side) / 2f
+                val y = (this.size.height - side) / 2f
+                drawPoly { McPlayerFaces.drawHead(it, layers, x, y, side, style, flip) }
+            },
+    )
+}
+
+@Composable
+fun McPlayerFace(
+    profile: GameProfile,
+    style: McHeadStyle,
+    modifier: Modifier = Modifier,
+    size: Dp = 16.dp,
+    flip: Boolean = false,
+) {
+    McPlayerFace(profile.id, style, modifier, size, flip)
+}
+
+@Composable
+fun NodeMcPlayerFace(
+    id: UUID?,
+    style: McHeadStyle,
+    size: Float = 16f,
+    modifier: PolyModifier = PolyModifier,
+    flip: Boolean = false,
+) {
+    val revision = McPlayerFaces.revision
+    val onDraw: RenderContext.(Float, Float, Float, Float) -> Unit = remember(revision, id, style, flip) {
+        { x, y, w, h ->
+            val layers = McPlayerFaces.layers(id)
+            val side = minOf(w, h)
+            if (layers != null) McPlayerFaces.drawHead(this, layers, x + (w - side) / 2f, y + (h - side) / 2f, side, style, flip)
         }
     }
     NodeCanvas(modifier.size(size, size), onDraw = onDraw)

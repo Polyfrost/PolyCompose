@@ -10,7 +10,7 @@ McSprite("textures/block/stone.png", size = 32.dp)
 ```
 
 - `McItemIcon` draws the item the way the inventory does, durability bar and count included. Pass `decorations = false` to leave the bar and count out, or `countOverride` to show your own text. If you animate the icon's scale (a pickup bounce or a hover zoom), pass the largest scale it reaches as `maxScale`. The icon is then rendered at that resolution from the start, so it stays sharp through the animation without being rendered again
-- `McPlayerFace` shows a player's skin face, with the hat layer unless you pass `hat = false`
+- `McPlayerFace` shows a player's skin face, with the hat layer unless you pass `hat = false`. Pass a `McHeadStyle` for the other head styles: `LAYERED` draws the hat at 9/8 the size of the face like the player model, reaching `size / 16` past the face on every side. `McPlayerFaces.drawHead` draws the same styles from a canvas
 - `McGuiSprite` draws a GUI sprite and follows the sprite's own nine-slice or tiling rules, so panels and bars stretch the way vanilla stretches them
 - `McSprite` takes a texture path, GUI sprite or block atlas sprite (`kind`), and can draw part of it with `region`
 

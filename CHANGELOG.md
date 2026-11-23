@@ -5,6 +5,7 @@
 - Fixed translucent player faces showing the face through the hat, since each head is now drawn as one image
 - Fixed player faces downloading the skin of players on a default skin even though they were in the player list
 - Fixed player faces downloading a player's skin again after they left the player list
+- Added `McHeadStyle` and `McPlayerFaces.drawHead` for drawing player heads as just the face, flat, or layered with the hat at 9/8 the size of the face like the player model. `McPlayerFace` and `NodeMcPlayerFace` take a style too
 
 ## [3.0.6]
 
