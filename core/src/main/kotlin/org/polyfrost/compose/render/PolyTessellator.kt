@@ -1811,16 +1811,23 @@ public abstract class PolyTessellator : PolyRenderer {
             parts = next
         }
         val rgb = color and 0xFFFFFF
-        val st = FloatArray(2)
+        val st = FloatArray(6)
+        val cs = IntArray(3)
         for (part in parts) {
             val m = part.size / 3
-            fun put(i: Int) {
-                uv.map(part[i * 3], part[i * 3 + 1], st)
-                val a = (part[i * 3 + 2] + 0.5f).toInt().coerceIn(0, 255)
-                vertex(part[i * 3], part[i * 3 + 1], st[0], st[1], (a shl 24) or rgb)
+            fun load(slot: Int, i: Int) {
+                uv.map(part[i * 3], part[i * 3 + 1], uvTmp)
+                st[slot * 2] = uvTmp[0]; st[slot * 2 + 1] = uvTmp[1]
+                cs[slot] = ((part[i * 3 + 2] + 0.5f).toInt().coerceIn(0, 255) shl 24) or rgb
             }
             for (i in 1 until m - 1) {
-                put(0); put(i); put(i + 1); put(i + 1)
+                load(0, 0); load(1, i); load(2, i + 1)
+                quadVerts(
+                    part[0], part[1], st[0], st[1], cs[0],
+                    part[i * 3], part[i * 3 + 1], st[2], st[3], cs[1],
+                    part[(i + 1) * 3], part[(i + 1) * 3 + 1], st[4], st[5], cs[2],
+                    part[(i + 1) * 3], part[(i + 1) * 3 + 1], st[4], st[5], cs[2],
+                )
             }
         }
     }
@@ -3594,7 +3601,10 @@ public abstract class PolyTessellator : PolyRenderer {
         x0: Float, y0: Float, u0: Float, v0: Float, c0: Int, x1: Float, y1: Float, u1: Float, v1: Float, c1: Int,
         x2: Float, y2: Float, u2: Float, v2: Float, c2: Int, x3: Float, y3: Float, u3: Float, v3: Float, c3: Int,
     ) {
-        val area = (x0 * y1 - x1 * y0) + (x1 * y2 - x2 * y1) + (x2 * y3 - x3 * y2) + (x3 * y0 - x0 * y3)
+        val ax = x1 - x0; val ay = y1 - y0
+        val bx = x2 - x0; val by = y2 - y0
+        val cx = x3 - x0; val cy = y3 - y0
+        val area = (ax * by - bx * ay) + (bx * cy - cx * by)
         if (recording) {
             record(x0, y0, c0)
             if (area > 0f) {
