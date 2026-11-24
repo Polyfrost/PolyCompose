@@ -415,6 +415,7 @@ class BlazeRenderer(private val guiScale: Float, private val keepVertices: Boole
 
     override fun guiItem(stack: ItemStack, x: Float, y: Float, w: Float, h: Float): Boolean {
         val s = state
+        if (stack.hasFoil() && ItemGlint.usable) return false
         if (s.proj != null || s.rot != null || s.alpha < 1f || !finiteText(x, y, 1f) || w <= 0f || h <= 0f) return false
         flush()
         val scissor = s.clip?.let { rectGui(it[0], it[1], it[2], it[3]) ?: return true }
