@@ -54,6 +54,18 @@ Row(Modifier.focusEntry(selectedFocus)) {
 }
 ```
 
+## Panels and popups
+
+PolyCompose remembers where focus was. When a menu, dialog or panel closes, or the focused element disappears, focus goes back to the last element that's still there, usually the button that opened it.
+
+Panels that slide in without being a popup should pull focus in when a controller opens them. Put `Modifier.focusWhenShown(open)` on the panel's content.
+
+Widgets that already show focus their own way, like a menu that highlights its current row, can turn off the focus ring with `Modifier.hidesFocusRing()`.
+
+## Button guide
+
+`ComposeScreen.controllerGuide` decides where Controlify's button guide sits: any corner, `BottomCenter`, or `Hidden`. Override it when the default bottom-left corner covers your UI.
+
 ## Sticks on custom widgets
 
 `Modifier.controllerPan { delta -> }` hands the right stick to a focused element instead of scrolling the page. Use it for things you'd normally drag, such as turning a 3D preview or panning a zoomed image. `delta` is in the same units as a scroll wheel event.
@@ -62,7 +74,7 @@ Row(Modifier.focusEntry(selectedFocus)) {
 
 - `Controllers.isActive` is `true` while the player is using a controller. It's Compose state, so reading it in a composable updates the UI when the player switches between mouse and controller.
 - `KeyEvent.isFromController` is `true` for key events PolyCompose sent on behalf of a controller. Keybind fields use it to stop recording A as Enter.
-- `ComposeOptions.onInputKind(owner, kind)` is called with `InputKind.Controller` when the player navigates with a controller, so you can show your own focus styling. Override `drawsControllerFocusRing` to hide the default ring.
+- `ComposeOptions.onInputKind(owner, kind)` is called with `InputKind.Controller` when the player navigates with a controller, so you can show your own focus styling. Override `ComposeOptions.focusRing` to restyle the focus ring, or `drawsControllerFocusRing` to hide it.
 
 ## Actions outside screens
 

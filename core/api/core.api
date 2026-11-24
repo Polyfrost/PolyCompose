@@ -954,6 +954,18 @@ public final class org/polyfrost/compose/host/controller/ControllerButton : java
 	public static fun values ()[Lorg/polyfrost/compose/host/controller/ControllerButton;
 }
 
+public final class org/polyfrost/compose/host/controller/ControllerGuide : java/lang/Enum {
+	public static final field BottomCenter Lorg/polyfrost/compose/host/controller/ControllerGuide;
+	public static final field BottomLeft Lorg/polyfrost/compose/host/controller/ControllerGuide;
+	public static final field BottomRight Lorg/polyfrost/compose/host/controller/ControllerGuide;
+	public static final field Hidden Lorg/polyfrost/compose/host/controller/ControllerGuide;
+	public static final field TopLeft Lorg/polyfrost/compose/host/controller/ControllerGuide;
+	public static final field TopRight Lorg/polyfrost/compose/host/controller/ControllerGuide;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Lorg/polyfrost/compose/host/controller/ControllerGuide;
+	public static fun values ()[Lorg/polyfrost/compose/host/controller/ControllerGuide;
+}
+
 public final class org/polyfrost/compose/host/controller/ControllerHint {
 	public static final field $stable I
 	public fun <init> (Lorg/polyfrost/compose/host/controller/ControllerButton;Ljava/lang/String;)V
@@ -998,6 +1010,8 @@ public final class org/polyfrost/compose/host/controller/ControllersKt {
 public final class org/polyfrost/compose/host/controller/FocusEntryKt {
 	public static final fun focusEntry (Landroidx/compose/ui/Modifier;Landroidx/compose/ui/focus/FocusRequester;Z)Landroidx/compose/ui/Modifier;
 	public static synthetic fun focusEntry$default (Landroidx/compose/ui/Modifier;Landroidx/compose/ui/focus/FocusRequester;ZILjava/lang/Object;)Landroidx/compose/ui/Modifier;
+	public static final fun focusWhenShown (Landroidx/compose/ui/Modifier;ZLjava/lang/Object;)Landroidx/compose/ui/Modifier;
+	public static synthetic fun focusWhenShown$default (Landroidx/compose/ui/Modifier;ZLjava/lang/Object;ILjava/lang/Object;)Landroidx/compose/ui/Modifier;
 }
 
 public final class org/polyfrost/compose/layout/ExtensionsKt {

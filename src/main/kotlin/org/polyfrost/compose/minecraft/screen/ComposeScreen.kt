@@ -50,6 +50,7 @@ import org.polyfrost.compose.host.LocalComposeOptions
 import org.polyfrost.compose.host.SceneKind
 import org.polyfrost.compose.host.InputKind
 import org.polyfrost.compose.host.controller.ControllerButton
+import org.polyfrost.compose.host.controller.ControllerGuide
 import org.polyfrost.compose.host.controller.ControllerHint
 import org.polyfrost.compose.host.controller.ControllerTargets
 import org.polyfrost.compose.host.controller.Controllers
@@ -259,6 +260,8 @@ abstract class ComposeScreen(
     private var controllerFocusVisible = false
 
     protected open val drawsControllerFocusRing: Boolean get() = true
+
+    open val controllerGuide: ControllerGuide get() = ControllerGuide.BottomLeft
 
     private var awaitingFirstFrame = false
 
@@ -1399,23 +1402,22 @@ abstract class ComposeScreen(
         val semantics = controllerSemantics ?: return
         val mark = semantics.focusedMark()
         if (mark != null) {
-            val at = focusTrail.indexOfFirst { it.owner === mark.owner }
-            if (at >= 0) while (focusTrail.size > at) focusTrail.removeAt(focusTrail.size - 1)
-            focusTrail += mark
-            if (focusTrail.size > MAX_FOCUS_TRAIL) focusTrail.removeAt(0)
+            val last = focusTrail.lastOrNull()
+            if (last == null || last.owner !== mark.owner || last.bounds != mark.bounds) {
+                focusTrail += mark
+                if (focusTrail.size > MAX_FOCUS_TRAIL) focusTrail.removeAt(0)
+            }
             return
         }
-        while (focusTrail.isNotEmpty()) {
-            val last = focusTrail.last()
-            if (!semantics.isAlive(last.owner)) {
-                focusTrail.removeAt(focusTrail.size - 1)
-                continue
-            }
-            if (withScene { semantics.focusNearest(last.owner, last.bounds) } == true) {
-                controllerFocusVisible = true
-                sceneDirty = true
-            }
-            return
+        focusTrail.removeAll { !semantics.isAlive(it.owner) }
+        val newest = focusTrail.lastOrNull() ?: return
+        val restored = withScene {
+            focusTrail.asReversed().any { semantics.focusAt(it.owner, it.bounds) } ||
+                semantics.focusNearest(newest.owner, newest.bounds)
+        } == true
+        if (restored) {
+            controllerFocusVisible = true
+            sceneDirty = true
         }
     }
 
@@ -1487,7 +1489,7 @@ abstract class ComposeScreen(
 
         const val MAX_SCENE_REBUILDS = 3
 
-        const val MAX_FOCUS_TRAIL = 8
+        const val MAX_FOCUS_TRAIL = 32
     }
 }
 

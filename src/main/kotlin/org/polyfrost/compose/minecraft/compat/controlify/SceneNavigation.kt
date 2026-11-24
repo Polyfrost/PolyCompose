@@ -83,6 +83,24 @@ internal class SceneSemantics {
         return false
     }
 
+    fun focusAt(owner: SemanticsOwner, at: Rect): Boolean {
+        for (node in owner.getAllSemanticsNodes(mergingEnabled = false)) {
+            if (SemanticsActions.RequestFocus !in node.config) continue
+            if (!sameSpot(node.boundsInWindow, at)) continue
+            val action = node.config.getOrNull(SemanticsActions.RequestFocus)?.action ?: continue
+            if (action()) return true
+        }
+        return false
+    }
+
+    private fun sameSpot(a: Rect, b: Rect): Boolean {
+        if (a.width <= 0f || a.height <= 0f) return false
+        val overlap = a.intersect(b)
+        if (overlap.width <= 0f || overlap.height <= 0f) return false
+        val area = overlap.width * overlap.height
+        return area >= SAME_SPOT * a.width * a.height && area >= SAME_SPOT * b.width * b.height
+    }
+
     private fun focusDistance(bounds: Rect, near: Rect): Float {
         val dx = maxOf(0f, maxOf(bounds.left, near.left) - minOf(bounds.right, near.right))
         val dy = maxOf(0f, maxOf(bounds.top, near.top) - minOf(bounds.bottom, near.bottom))
@@ -165,6 +183,8 @@ internal class SceneSemantics {
 }
 
 private const val MAX_FOCUS_ATTEMPTS = 8
+
+private const val SAME_SPOT = 0.6f
 
 internal class FocusMark(val owner: SemanticsOwner, val bounds: Rect)
 

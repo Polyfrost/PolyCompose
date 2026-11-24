@@ -19,6 +19,7 @@ import net.minecraft.network.chat.Component
 import net.minecraft.network.chat.MutableComponent
 import net.minecraft.resources.Identifier
 import org.polyfrost.compose.host.controller.ControllerButton
+import org.polyfrost.compose.host.controller.ControllerGuide
 import org.polyfrost.compose.minecraft.screen.ComposeScreen
 
 //? if >= 26.3 {
@@ -98,6 +99,8 @@ internal class ComposeScreenProcessor(screen: ComposeScreen) : ScreenProcessor<C
         vmouse: Optional<VirtualMouseHandler>,
     ) {
         if (vmouse.isPresent || !controller.settings().generic.guide.showScreenGuides) return
+        val placement = screen.controllerGuide
+        if (placement == ControllerGuide.Hidden) return
         val font = Minecraft.getInstance().font
         val line = Component.empty()
         line.hint(ControlifyBindings.GUI_PRESS.inputGlyph(), SELECT)
@@ -107,11 +110,20 @@ internal class ComposeScreenProcessor(screen: ComposeScreen) : ScreenProcessor<C
             line.hint(glyph, Component.literal(hint.label))
         }
         line.append(ControlifyBindings.GUI_SECONDARY_NAVI_DOWN.inputGlyph()).append(" ").append(SCROLL)
-        val y = screen.height - font.lineHeight - GUIDE_MARGIN
+        val width = font.width(line)
+        val x = when (placement) {
+            ControllerGuide.BottomCenter -> (screen.width - width) / 2
+            ControllerGuide.BottomRight, ControllerGuide.TopRight -> screen.width - width - GUIDE_MARGIN
+            else -> GUIDE_MARGIN
+        }
+        val y = when (placement) {
+            ControllerGuide.TopLeft, ControllerGuide.TopRight -> GUIDE_MARGIN
+            else -> screen.height - font.lineHeight - GUIDE_MARGIN
+        }
         //? if >= 26.1 {
-        graphics.text(font, line, GUIDE_MARGIN, y, -1, true)
+        graphics.text(font, line, x, y, -1, true)
         //?} else
-        //graphics.drawString(font, line, GUIDE_MARGIN, y, -1, true)
+        //graphics.drawString(font, line, x, y, -1, true)
     }
 
     private fun MutableComponent.hint(glyph: Component, label: Component) {
