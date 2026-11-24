@@ -20,7 +20,7 @@ public fun visualOrder(text: String): String {
 }
 
 internal fun mcVisualOrder(text: String, literal: Boolean): String {
-    if (literal) return visualOrder(text)
+    if (literal) return if ('§' in text) text else visualOrder(text)
     var p = 0
     while (p + 1 < text.length && text[p] == '§') p += 2
     if (text.indexOf('§', p) >= 0) return text

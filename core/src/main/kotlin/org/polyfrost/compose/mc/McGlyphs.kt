@@ -3,6 +3,7 @@ package org.polyfrost.compose.mc
 import org.polyfrost.compose.render.FontManager
 import org.polyfrost.compose.render.PolyBitmap
 import org.polyfrost.compose.render.PolyGlyphPage
+import org.polyfrost.compose.render.mcVisualOrder
 import kotlin.math.roundToInt
 
 /**
@@ -54,6 +55,7 @@ public object McGlyphs {
 
     @JvmStatic
     public fun width(text: String, scale: Float, literal: Boolean): Float {
+        val text = mcVisualOrder(text, literal)
         val source = source
         val cache = if (source != null) cacheFor(source) else null
         var w = 0f

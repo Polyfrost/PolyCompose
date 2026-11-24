@@ -874,7 +874,7 @@ internal class PolyParagraph(private val intr: PolyIntrinsics, maxLines: Int, ov
                 if (a >= e) continue
                 val glyphs = intr.glyphs.substring(a, e)
                 segs += if (level and 1 == 0) Seg(glyphs, x + intr.width(rs, a), intr.width(a, e), run)
-                else if (McFonts.isMinecraft(run.font.name)) Seg(glyphs.replace(LIGATURE_PLACEHOLDER.toString(), ""), x + intr.width(e, re), intr.width(a, e), run)
+                else if (McFonts.isMinecraft(run.font.name) && '§' !in glyphs && Bidi.requiresBidi(glyphs.toCharArray(), 0, glyphs.length)) Seg(glyphs.replace(LIGATURE_PLACEHOLDER.toString(), ""), x + intr.width(e, re), intr.width(a, e), run)
                 else Seg(reversedClusters(glyphs), x + intr.width(e, re), intr.width(a, e), run)
             }
             x += intr.width(rs, re)

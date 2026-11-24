@@ -5,7 +5,6 @@ import org.polyfrost.compose.render.FontManager
 import org.polyfrost.compose.render.PolyColor
 import org.polyfrost.compose.render.PolyRenderer
 import org.polyfrost.compose.render.RenderContext
-import org.polyfrost.compose.render.mcVisualOrder
 import java.util.function.IntSupplier
 
 private const val LIVE_PAD = 4f
@@ -73,12 +72,12 @@ public class McTextNode : PolyNode() {
         measureDirty = false
         val t = currentText
         if (t.indexOf('\n') < 0 && t.indexOf('\r') < 0) {
-            intrinsicWidth = McFontQueue.measureTextWidth(mcVisualOrder(t, literal), scale, literal)
+            intrinsicWidth = McFontQueue.measureTextWidth(t, scale, literal)
             intrinsicHeight = McFontQueue.measureBlockHeight(1, scale)
             return
         }
         val lines = t.lines()
-        intrinsicWidth = lines.maxOf { McFontQueue.measureTextWidth(mcVisualOrder(it, literal), scale, literal) }
+        intrinsicWidth = lines.maxOf { McFontQueue.measureTextWidth(it, scale, literal) }
         intrinsicHeight = McFontQueue.measureBlockHeight(lines.size, scale)
     }
 
