@@ -282,7 +282,8 @@ object McPlayerFaces {
         if (key != null && key == entry.clientKey && owner === entry.clientTexture) return
         val read = when {
             location == null || download(location) != Download.DONE -> null
-            key == defaultKey(entry.id) -> defaultLayers(entry.id).also { forgetCustom(entry) }
+            key == defaultKey(entry.id) -> (replacedDefault(location)?.let { buildLayers(key, it, opaqueFace = true) } ?: defaultLayers(entry.id))
+                .also { forgetCustom(entry) }
             else -> runCatching { readTexture(location) ?: McResources.image(location.namespace, location.path) }.getOrNull()
                 ?.let { buildLayers(key!!, it, opaqueFace = true) }
                 ?.also { entry.custom = it }
@@ -443,6 +444,13 @@ object McPlayerFaces {
     }
 
     private fun textureOwner(location: Identifier): Any? = runCatching { Minecraft.getInstance().textureManager.getTexture(location) }.getOrNull()
+
+    private fun replacedDefault(location: Identifier): PolyBitmap? {
+        //? if >= 1.21.4 {
+        return runCatching { readTexture(location) }.getOrNull()
+        //?} else
+        //return null
+    }
 
     private fun awaitingUpload(location: Identifier): Boolean {
         //? if >= 1.21.4 {
