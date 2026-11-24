@@ -23,5 +23,10 @@ public enum class ControllerAxes {
 @ApiStatus.Internal
 public val ControllerArrowsKey: SemanticsPropertyKey<ControllerAxes> = SemanticsPropertyKey("ControllerArrows")
 
+@ApiStatus.Internal
+public val HidesFocusRingKey: SemanticsPropertyKey<Unit> = SemanticsPropertyKey("HidesFocusRing")
+
+public fun Modifier.hidesFocusRing(): Modifier = semantics { this[HidesFocusRingKey] = Unit }
+
 public fun Modifier.controllerArrows(axes: ControllerAxes = ControllerAxes.Both): Modifier =
     semantics { this[ControllerArrowsKey] = axes }

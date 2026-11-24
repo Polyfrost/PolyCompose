@@ -31,6 +31,8 @@ public open class ComposeOptions {
 
     public open fun onRemoved(owner: Any) {}
 
+    public open val focusRing: FocusRingStyle get() = FocusRingStyle.Default
+
     public open val isCapturingInput: Boolean get() = false
 
     public open fun consumeEscape(owner: Any): Boolean = false

@@ -41,6 +41,7 @@ import org.polyfrost.compose.host.BackStack
 import org.polyfrost.compose.effect.PolyGlassLight
 import org.polyfrost.compose.host.ComposeHost
 import org.polyfrost.compose.host.ComposeOptions
+import org.polyfrost.compose.host.FocusRingStyle
 import org.polyfrost.compose.host.HostCallbacks
 import org.polyfrost.compose.host.HostErrors
 import org.polyfrost.compose.host.KeyState
@@ -55,6 +56,7 @@ import org.polyfrost.compose.host.controller.Controllers
 import org.polyfrost.compose.host.controller.LocalControllerTargets
 import org.polyfrost.compose.minecraft.compat.controlify.ControllerBridge
 import org.polyfrost.compose.minecraft.compat.controlify.FieldPreview
+import org.polyfrost.compose.minecraft.compat.controlify.FocusMark
 import org.polyfrost.compose.minecraft.compat.controlify.KeyboardPreview
 import org.polyfrost.compose.minecraft.compat.controlify.SceneFocus
 import org.polyfrost.compose.minecraft.compat.controlify.SceneSemantics
@@ -746,14 +748,24 @@ abstract class ComposeScreen(
 
     private fun drawFocusRing(canvas: PolyCanvas) {
         val rect = withScene { it.focusManager.getFocusRect(false) } ?: return
-        val stroke = McWindow.guiScale().toFloat().coerceAtLeast(1f)
-        val pad = stroke * 1.5f
-        val paint = Paint().apply {
-            style = PaintingStyle.Stroke
-            strokeWidth = stroke
-            color = Color.White.copy(alpha = 0.9f)
+        if (controllerSemantics?.focusedHidesRing() == true) return
+        val style = HostCallbacks.call(options, "ComposeOptions.focusRing", FocusRingStyle.Default) { options.focusRing }
+        val density = scaledDensity()
+        val stroke = (style.width.value * density).coerceAtLeast(1f)
+        val gap = style.gap.value * density
+        val radius = style.cornerRadius.value * density
+        val paint = Paint().apply { this.style = PaintingStyle.Stroke }
+        style.halo?.let { halo ->
+            val haloWidth = (stroke / 2f).coerceAtLeast(1f)
+            val inset = gap - haloWidth / 2f
+            paint.strokeWidth = haloWidth
+            paint.color = halo
+            canvas.drawRoundRect(rect.left - inset, rect.top - inset, rect.right + inset, rect.bottom + inset, radius, radius, paint)
         }
-        canvas.drawRoundRect(rect.left - pad, rect.top - pad, rect.right + pad, rect.bottom + pad, pad * 2f, pad * 2f, paint)
+        val outset = gap + stroke / 2f
+        paint.strokeWidth = stroke
+        paint.color = style.color
+        canvas.drawRoundRect(rect.left - outset, rect.top - outset, rect.right + outset, rect.bottom + outset, radius + outset, radius + outset, paint)
     }
 
     private fun drawKeyboardPreview(canvas: PolyCanvas) {
@@ -1363,6 +1375,10 @@ abstract class ComposeScreen(
         if (!showing) return false
         reportInputKind(InputKind.Controller)
         val focused = withScene { it.focusManager.getFocusRect(false) } != null
+        if (!focused) {
+            controllerKeepFocus()
+            if (withScene { it.focusManager.getFocusRect(false) } != null) return true
+        }
         val arrows = focused && controllerTextField() == null
         if (arrows && controllerSemantics?.focusedArrows()?.covers(direction) == true && tapArrow(arrowKey)) return true
         if (controllerMoveFocus(direction)) return true
@@ -1374,6 +1390,33 @@ abstract class ComposeScreen(
         controllerFocusVisible = true
         sceneDirty = true
         return true
+    }
+
+    private val focusTrail = ArrayList<FocusMark>()
+
+    internal fun controllerKeepFocus() {
+        if (!showing || liveScene() == null) return
+        val semantics = controllerSemantics ?: return
+        val mark = semantics.focusedMark()
+        if (mark != null) {
+            val at = focusTrail.indexOfFirst { it.owner === mark.owner }
+            if (at >= 0) while (focusTrail.size > at) focusTrail.removeAt(focusTrail.size - 1)
+            focusTrail += mark
+            if (focusTrail.size > MAX_FOCUS_TRAIL) focusTrail.removeAt(0)
+            return
+        }
+        while (focusTrail.isNotEmpty()) {
+            val last = focusTrail.last()
+            if (!semantics.isAlive(last.owner)) {
+                focusTrail.removeAt(focusTrail.size - 1)
+                continue
+            }
+            if (withScene { semantics.focusNearest(last.owner, last.bounds) } == true) {
+                controllerFocusVisible = true
+                sceneDirty = true
+            }
+            return
+        }
     }
 
     internal fun controllerTextField(): Rect? {
@@ -1443,6 +1486,8 @@ abstract class ComposeScreen(
         fun isWheelStep(value: Double) = abs(value * 120 - round(value * 120)) < 1e-3
 
         const val MAX_SCENE_REBUILDS = 3
+
+        const val MAX_FOCUS_TRAIL = 8
     }
 }
 

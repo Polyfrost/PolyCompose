@@ -37,6 +37,7 @@ internal class ComposeScreenProcessor(screen: ComposeScreen) : ScreenProcessor<C
     )
 
     override fun handleComponentNavigation(controller: ControllerEntity) {
+        screen.controllerKeepFocus()
         val input = controller.input().orElse(null) ?: return
         val now = input.stateNow()
         val then = input.stateThen()
