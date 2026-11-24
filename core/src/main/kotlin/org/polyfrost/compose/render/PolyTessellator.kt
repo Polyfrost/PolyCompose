@@ -1304,8 +1304,6 @@ public abstract class PolyTessellator : PolyRenderer {
         mcLines(text, x, y, 0f, color, scale, false, literal)
     }
 
-    private fun mcVisualOrder(text: String, literal: Boolean): String = if (!literal && '§' in text) text else visualOrder(text)
-
     private fun mcLines(text: String, x: Float, y: Float, dy: Float, color: Int, scale: Float, shadow: Boolean, literal: Boolean) {
         var start = 0
         var index = 0
@@ -1370,7 +1368,7 @@ public abstract class PolyTessellator : PolyRenderer {
         beginDraw()
         if (cpuOnly) return
         val x = if (snapMcX) mcLineLeft(x) else x
-        mcOutlineQuads(text, x, y, mulAlpha(outlineColor, state.alpha), scale, literal)
+        mcOutlineQuads(mcVisualOrder(text, literal), x, y, mulAlpha(outlineColor, state.alpha), scale, literal)
         mcText(text, x, y, color, false, scale, literal, false)
     }
 

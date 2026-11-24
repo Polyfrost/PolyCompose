@@ -104,7 +104,7 @@ public class RenderContext(public val renderer: PolyRenderer) {
         renderer.mcTextOutline(text, x, y, color, outlineColor, scale, literal)
     }
 
-    public fun measureText(text: String, font: PolyFont): Float = font.measureTextWidth(text)
+    public fun measureText(text: String, font: PolyFont): Float = font.measureTextWidth(visualOrder(text))
 
     public fun live(draw: RenderContext.() -> Unit): Unit = renderer.live { runLive(it, draw) }
 
