@@ -6,14 +6,20 @@ If the player has Controlify installed, every `ComposeScreen` works with a contr
 
 | Input | What it does |
 | --- | --- |
-| Left stick, d-pad | Sends an arrow key to the focused element. If nothing uses it, focus moves that way |
+| Left stick, d-pad | Moves focus that way. If there's nothing to move to, the focused element gets an arrow key instead |
 | A | Sends Enter to the focused element. Text fields open Controlify's on-screen keyboard |
 | B | Sends Esc, so `BackStack` entries close first, then the screen |
 | X | Runs the focused element's X action, or sends the Menu key so keyboard context menus open |
 | Bumpers, triggers | Run the focused element's action for that button, or move focus to the next or previous element |
 | Right stick | Scrolls whatever is under the focused element |
 
-Because the d-pad sends arrow keys before it moves focus, anything that already works with a keyboard works with a controller too. Sliders that react to Left and Right, menus that move their highlight with Up and Down, and lists that reorder with arrow keys all need no extra code.
+When focus can't move, the focused element gets the arrow key, so menus that move their own highlight with Up and Down work without extra code.
+
+Widgets that need the d-pad for themselves, such as sliders, carousels or a cursor that nudges something, mark it with `Modifier.controllerArrows`. They then get the arrow keys first, and focus only moves when they don't use one:
+
+```kotlin
+Modifier.controllerArrows(ControllerAxes.Horizontal).onKeyEvent { ... }.focusable()
+```
 
 Clickable things (buttons, `Modifier.clickable`, text fields) can be reached automatically. If something can't be reached, make it focusable or clickable.
 

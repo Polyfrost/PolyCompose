@@ -2,7 +2,8 @@
 
 ## [Unreleased]
 
-- The d-pad and left stick send arrow keys to the focused element before moving focus, so sliders, menus and anything else that works with a keyboard also works with a controller
+- When the d-pad or left stick can't move focus any further, the focused element gets an arrow key instead, so menus that move their own highlight work with a controller
+- Added `Modifier.controllerArrows` for widgets such as sliders that want the d-pad's arrow keys before focus moves
 - A sends Enter to the focused element before the screen's own key handling, so screens that react to Enter no longer take presses away from the focused button
 - X opens the focused element's context menu when it supports the Menu key
 - Added `Modifier.controllerPan`, which hands the right stick to a focused element instead of scrolling, for things like 3D previews and zoomed images

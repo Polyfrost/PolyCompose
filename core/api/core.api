@@ -898,6 +898,21 @@ public final class org/polyfrost/compose/host/controller/ControllerActionSpec {
 	public final fun getRadial ()Z
 }
 
+public final class org/polyfrost/compose/host/controller/ControllerArrowsKt {
+	public static final fun controllerArrows (Landroidx/compose/ui/Modifier;Lorg/polyfrost/compose/host/controller/ControllerAxes;)Landroidx/compose/ui/Modifier;
+	public static synthetic fun controllerArrows$default (Landroidx/compose/ui/Modifier;Lorg/polyfrost/compose/host/controller/ControllerAxes;ILjava/lang/Object;)Landroidx/compose/ui/Modifier;
+}
+
+public final class org/polyfrost/compose/host/controller/ControllerAxes : java/lang/Enum {
+	public static final field Both Lorg/polyfrost/compose/host/controller/ControllerAxes;
+	public static final field Horizontal Lorg/polyfrost/compose/host/controller/ControllerAxes;
+	public static final field Vertical Lorg/polyfrost/compose/host/controller/ControllerAxes;
+	public final fun covers-3ESFkO8 (I)Z
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Lorg/polyfrost/compose/host/controller/ControllerAxes;
+	public static fun values ()[Lorg/polyfrost/compose/host/controller/ControllerAxes;
+}
+
 public final class org/polyfrost/compose/host/controller/ControllerButton : java/lang/Enum {
 	public static final field A Lorg/polyfrost/compose/host/controller/ControllerButton;
 	public static final field B Lorg/polyfrost/compose/host/controller/ControllerButton;

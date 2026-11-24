@@ -1363,12 +1363,17 @@ abstract class ComposeScreen(
         if (!showing) return false
         reportInputKind(InputKind.Controller)
         val focused = withScene { it.focusManager.getFocusRect(false) } != null
-        if (focused && controllerTextField() == null && controllerTap(arrowKey)) {
-            controllerFocusVisible = true
-            sceneDirty = true
-            return true
-        }
-        return controllerMoveFocus(direction)
+        val arrows = focused && controllerTextField() == null
+        if (arrows && controllerSemantics?.focusedArrows()?.covers(direction) == true && tapArrow(arrowKey)) return true
+        if (controllerMoveFocus(direction)) return true
+        return arrows && tapArrow(arrowKey)
+    }
+
+    private fun tapArrow(arrowKey: Int): Boolean {
+        if (!controllerTap(arrowKey)) return false
+        controllerFocusVisible = true
+        sceneDirty = true
+        return true
     }
 
     internal fun controllerTextField(): Rect? {

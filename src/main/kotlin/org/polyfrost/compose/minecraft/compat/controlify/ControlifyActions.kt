@@ -22,6 +22,7 @@ import org.polyfrost.compose.host.controller.ControllerActionSpec
 import org.polyfrost.compose.host.controller.ControllerActionState
 import org.polyfrost.compose.host.controller.ControllerBackend
 import org.polyfrost.compose.host.controller.ControllerButton
+import org.polyfrost.compose.minecraft.platform.LoadedMods
 
 internal object ControlifyActions : ControllerBackend {
     private val LOGGER = LogManager.getLogger("PolyCompose/Controller")
@@ -65,7 +66,7 @@ internal object ControlifyActions : ControllerBackend {
             ControlifyBindApi.get().registerBinding { builder ->
                 builder.id(namespace, path)
                     .name(Component.translatable(spec.name))
-                    .category(Component.translatable(spec.category))
+                    .category(Component.translatableWithFallback(spec.category, LoadedMods.name(spec.category) ?: spec.category))
                     .defaultInput(inputFor(spec.defaultButton))
                 if (context != null) builder.allowedContexts(context)
                 //? if >= 26.1 {

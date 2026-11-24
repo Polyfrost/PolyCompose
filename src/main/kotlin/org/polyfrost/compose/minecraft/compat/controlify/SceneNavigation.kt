@@ -15,6 +15,8 @@ import androidx.compose.ui.semantics.getAllSemanticsNodes
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.text.TextRange
 import java.lang.reflect.Field
+import org.polyfrost.compose.host.controller.ControllerArrowsKey
+import org.polyfrost.compose.host.controller.ControllerAxes
 
 internal object SceneFocus {
     private val ownerField: Field? by lazy {
@@ -61,6 +63,17 @@ internal class SceneSemantics {
                 if (bounds.width > 0f && bounds.height > 0f) action(bounds)
             }
         }
+    }
+
+    fun focusedArrows(): ControllerAxes? {
+        for (owner in owners.toList()) {
+            for (node in owner.getAllSemanticsNodes(mergingEnabled = true)) {
+                val config = node.config
+                if (!config.getOrElse(SemanticsProperties.Focused) { false }) continue
+                config.getOrNull(ControllerArrowsKey)?.let { return it }
+            }
+        }
+        return null
     }
 
     fun focusedTextField(): Rect? {
