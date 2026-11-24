@@ -41,6 +41,19 @@ Pass `requireFocus = false` for an action that works anywhere on the screen, suc
 
 You can use X, Y, the bumpers, the triggers, both stick clicks, Back and Start. A and B always mean Enter and Esc.
 
+## Choices
+
+When focus moves into a row of choices, such as tabs or a segmented control, it should land on the selected one rather than whichever is closest. Give the selected item a `FocusRequester` and put `Modifier.focusEntry(requester)` on the row:
+
+```kotlin
+val selectedFocus = remember { FocusRequester() }
+Row(Modifier.focusEntry(selectedFocus)) {
+    options.forEach { option ->
+        Chip(option, Modifier.then(if (option == selected) Modifier.focusRequester(selectedFocus) else Modifier))
+    }
+}
+```
+
 ## Sticks on custom widgets
 
 `Modifier.controllerPan { delta -> }` hands the right stick to a focused element instead of scrolling the page. Use it for things you'd normally drag, such as turning a 3D preview or panning a zoomed image. `delta` is in the same units as a scroll wheel event.

@@ -977,6 +977,11 @@ public final class org/polyfrost/compose/host/controller/ControllersKt {
 	public static final fun isFromController-ZmokQxo (Ljava/lang/Object;)Z
 }
 
+public final class org/polyfrost/compose/host/controller/FocusEntryKt {
+	public static final fun focusEntry (Landroidx/compose/ui/Modifier;Landroidx/compose/ui/focus/FocusRequester;Z)Landroidx/compose/ui/Modifier;
+	public static synthetic fun focusEntry$default (Landroidx/compose/ui/Modifier;Landroidx/compose/ui/focus/FocusRequester;ZILjava/lang/Object;)Landroidx/compose/ui/Modifier;
+}
+
 public final class org/polyfrost/compose/layout/ExtensionsKt {
 	public static final fun getPct (D)Lorg/polyfrost/compose/layout/PolySize$Percent;
 	public static final fun getPct (F)Lorg/polyfrost/compose/layout/PolySize$Percent;

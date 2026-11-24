@@ -3,6 +3,7 @@
 ## [Unreleased]
 
 - When the d-pad or left stick can't move focus any further, the focused element gets an arrow key instead, so menus that move their own highlight work with a controller
+- Added `Modifier.focusEntry`, which makes focus land on the selected item when it moves into a row of choices such as tabs
 - Added `Modifier.controllerArrows` for widgets such as sliders that want the d-pad's arrow keys before focus moves
 - A sends Enter to the focused element before the screen's own key handling, so screens that react to Enter no longer take presses away from the focused button
 - X opens the focused element's context menu when it supports the Menu key
