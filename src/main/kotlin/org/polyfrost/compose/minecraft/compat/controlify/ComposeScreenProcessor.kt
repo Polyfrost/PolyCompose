@@ -42,6 +42,7 @@ internal class ComposeScreenProcessor(screen: ComposeScreen) : ScreenProcessor<C
     override fun handleComponentButtonOverride(controller: ControllerEntity): Boolean = false
 
     override fun handleComponentNavigation(controller: ControllerEntity) {
+        screen.controllerRetryPending()
         screen.controllerKeepFocus()
         val input = controller.input().orElse(null) ?: return
         val now = input.stateNow()
@@ -106,32 +107,52 @@ internal class ComposeScreenProcessor(screen: ComposeScreen) : ScreenProcessor<C
         val placement = screen.controllerGuide
         if (placement == ControllerGuide.Hidden) return
         val font = Minecraft.getInstance().font
-        val line = Component.empty()
-        line.hint(ControlifyBindings.GUI_PRESS.inputGlyph(), SELECT)
-        line.hint(ControlifyBindings.GUI_BACK.inputGlyph(), BACK)
+        val hints = ArrayList<Component>()
+        hints += hint(ControlifyBindings.GUI_PRESS.inputGlyph(), SELECT)
+        hints += hint(ControlifyBindings.GUI_BACK.inputGlyph(), BACK)
         for (hint in screen.controllerHints()) {
             val glyph = ComposeGuiBindings.glyph(hint.button) ?: continue
-            line.hint(glyph, Component.literal(hint.label))
+            hints += hint(glyph, Component.literal(hint.label))
         }
-        line.append(ControlifyBindings.GUI_SECONDARY_NAVI_DOWN.inputGlyph()).append(" ").append(SCROLL)
-        val width = font.width(line)
-        val x = when (placement) {
-            ControllerGuide.BottomCenter -> (screen.width - width) / 2
-            ControllerGuide.BottomRight, ControllerGuide.TopRight -> screen.width - width - GUIDE_MARGIN
-            else -> GUIDE_MARGIN
+        hints += hint(ControlifyBindings.GUI_SECONDARY_NAVI_DOWN.inputGlyph(), SCROLL)
+        hints += hint(ControlifyBindings.VMOUSE_TOGGLE.inputGlyph(), CURSOR)
+        val lines = wrap(hints, screen.width - GUIDE_MARGIN * 2) { font.width(it) }
+        val top = placement == ControllerGuide.TopLeft || placement == ControllerGuide.TopRight
+        lines.forEachIndexed { index, line ->
+            val width = font.width(line)
+            val x = when (placement) {
+                ControllerGuide.BottomCenter -> (screen.width - width) / 2
+                ControllerGuide.BottomRight, ControllerGuide.TopRight -> screen.width - width - GUIDE_MARGIN
+                else -> GUIDE_MARGIN
+            }
+            val row = if (top) index else lines.size - 1 - index
+            val y = if (top) GUIDE_MARGIN + row * (font.lineHeight + GUIDE_LINE_GAP)
+            else screen.height - GUIDE_MARGIN - font.lineHeight - row * (font.lineHeight + GUIDE_LINE_GAP)
+            //? if >= 26.1 {
+            graphics.text(font, line, x, y, -1, true)
+            //?} else
+            //graphics.drawString(font, line, x, y, -1, true)
         }
-        val y = when (placement) {
-            ControllerGuide.TopLeft, ControllerGuide.TopRight -> GUIDE_MARGIN
-            else -> screen.height - font.lineHeight - GUIDE_MARGIN
-        }
-        //? if >= 26.1 {
-        graphics.text(font, line, x, y, -1, true)
-        //?} else
-        //graphics.drawString(font, line, x, y, -1, true)
     }
 
-    private fun MutableComponent.hint(glyph: Component, label: Component) {
-        append(glyph).append(" ").append(label).append("   ")
+    private fun hint(glyph: Component, label: Component): Component = Component.empty().append(glyph).append(" ").append(label)
+
+    private fun wrap(hints: List<Component>, maxWidth: Int, width: (Component) -> Int): List<Component> {
+        val lines = ArrayList<MutableComponent>()
+        var current: MutableComponent? = null
+        var currentWidth = 0
+        for (hint in hints) {
+            val hintWidth = width(hint)
+            val line = current
+            if (line != null && currentWidth + GUIDE_SPACING + hintWidth <= maxWidth) {
+                line.append(GAP).append(hint)
+                currentWidth += GUIDE_SPACING + hintWidth
+            } else {
+                current = Component.empty().append(hint).also { lines += it }
+                currentWidth = hintWidth
+            }
+        }
+        return lines
     }
 
     private fun fallbackTrigger(button: ControllerButton, now: ControllerStateView, then: ControllerStateView): Boolean {
@@ -156,6 +177,8 @@ internal class ComposeScreenProcessor(screen: ComposeScreen) : ScreenProcessor<C
         const val SCROLL_STEP = 60f
         const val TRIGGER_THRESHOLD = 0.5f
         const val GUIDE_MARGIN = 4
+        const val GUIDE_LINE_GAP = 2
+        const val GUIDE_SPACING = 12
 
         //? if >= 26.3 {
         const val MENU_KEY = SDL_SCANCODE_APPLICATION
@@ -165,6 +188,8 @@ internal class ComposeScreenProcessor(screen: ComposeScreen) : ScreenProcessor<C
         val SELECT: Component = Component.translatableWithFallback("polycompose.controller.select", "Select")
         val BACK: Component = Component.translatable("gui.back")
         val SCROLL: Component = Component.translatableWithFallback("polycompose.controller.scroll", "Scroll")
+        val CURSOR: Component = Component.translatableWithFallback("polycompose.controller.cursor", "Cursor")
+        val GAP: Component = Component.literal("   ")
     }
 }
 //?}

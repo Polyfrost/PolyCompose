@@ -20,6 +20,7 @@ import java.lang.reflect.Field
 import org.polyfrost.compose.host.controller.ControllerArrowsKey
 import org.polyfrost.compose.host.controller.ControllerAxes
 import org.polyfrost.compose.host.controller.HidesFocusRingKey
+import org.polyfrost.compose.host.controller.ShownGroupKey
 
 internal object SceneFocus {
     private val ownerField: Field? by lazy {
@@ -55,7 +56,7 @@ internal class SceneSemantics {
     }
 
     fun focusedMark(): FocusMark? {
-        for (owner in owners.toList()) {
+        for (owner in listOfNotNull(activeOwner())) {
             for (node in owner.getAllSemanticsNodes(mergingEnabled = false)) {
                 if (!node.config.getOrElse(SemanticsProperties.Focused) { false }) continue
                 val bounds = node.boundsInWindow
@@ -68,16 +69,20 @@ internal class SceneSemantics {
 
     fun isAlive(owner: SemanticsOwner): Boolean = owner in owners
 
-    fun moveSpatially(direction: FocusDirection): Boolean {
-        for (owner in owners.toList()) {
+    private fun activeOwner(): SemanticsOwner? = owners.toList().asReversed().firstOrNull { owner ->
+        owner.getAllSemanticsNodes(mergingEnabled = false).any { it.config.getOrElse(SemanticsProperties.Focused) { false } }
+    }
+
+    fun moveSpatially(direction: FocusDirection, scroll: Boolean = true): Int {
+        for (owner in listOfNotNull(activeOwner())) {
             for (node in owner.getAllSemanticsNodes(mergingEnabled = false)) {
                 if (!node.config.getOrElse(SemanticsProperties.Focused) { false }) continue
                 val bounds = node.boundsInWindow
                 if (bounds.width <= 0f || bounds.height <= 0f) continue
-                return SpatialNavigation.move(owner, bounds, node, direction)
+                return SpatialNavigation.move(owner, bounds, node, direction, scroll)
             }
         }
-        return false
+        return SpatialNavigation.NONE
     }
 
     fun focusNearest(owner: SemanticsOwner, near: Rect): Boolean {
@@ -96,16 +101,27 @@ internal class SceneSemantics {
         return false
     }
 
-    fun focusFirstIn(area: Rect): Boolean {
+    fun focusFirstIn(token: Any): Boolean {
         for (owner in owners.toList().asReversed()) {
-            val inside = owner.getAllSemanticsNodes(mergingEnabled = false)
-                .filter { SemanticsActions.RequestFocus in it.config }
-                .filter { val b = it.boundsInWindow; b.width > 0f && b.height > 0f && area.contains(b.center) }
+            val all = owner.getAllSemanticsNodes(mergingEnabled = false)
+            val group = all.firstOrNull { it.config.getOrNull(ShownGroupKey) === token } ?: continue
+            val inside = all
+                .filter { SemanticsActions.RequestFocus in it.config && (it.id == group.id || isInside(group, it)) }
+                .filter { val b = it.boundsInWindow; b.width > 0f && b.height > 0f }
                 .sortedWith(compareBy({ it.boundsInWindow.top }, { it.boundsInWindow.left }))
             for (node in inside.take(MAX_FOCUS_ATTEMPTS)) {
                 val action = node.config.getOrNull(SemanticsActions.RequestFocus)?.action ?: continue
                 if (action()) return true
             }
+        }
+        return false
+    }
+
+    private fun isInside(group: SemanticsNode, node: SemanticsNode): Boolean {
+        var parent = node.parent
+        while (parent != null) {
+            if (parent.id == group.id) return true
+            parent = parent.parent
         }
         return false
     }
@@ -150,7 +166,7 @@ internal class SceneSemantics {
     }
 
     fun focusedHidesRing(): Boolean {
-        for (owner in owners.toList()) {
+        for (owner in listOfNotNull(activeOwner())) {
             for (node in owner.getAllSemanticsNodes(mergingEnabled = true)) {
                 val config = node.config
                 if (!config.getOrElse(SemanticsProperties.Focused) { false }) continue
@@ -161,7 +177,7 @@ internal class SceneSemantics {
     }
 
     fun focusedArrows(): ControllerAxes? {
-        for (owner in owners.toList()) {
+        for (owner in listOfNotNull(activeOwner())) {
             for (node in owner.getAllSemanticsNodes(mergingEnabled = true)) {
                 val config = node.config
                 if (!config.getOrElse(SemanticsProperties.Focused) { false }) continue
@@ -172,7 +188,7 @@ internal class SceneSemantics {
     }
 
     fun focusedTextField(): Rect? {
-        for (owner in owners.toList()) {
+        for (owner in listOfNotNull(activeOwner())) {
             for (node in owner.getAllSemanticsNodes(mergingEnabled = true)) {
                 val config = node.config
                 if (SemanticsActions.SetText !in config) continue
@@ -184,7 +200,7 @@ internal class SceneSemantics {
     }
 
     fun focusedField(): FieldPreview? {
-        for (owner in owners.toList()) {
+        for (owner in listOfNotNull(activeOwner())) {
             for (node in owner.getAllSemanticsNodes(mergingEnabled = true)) {
                 val config = node.config
                 if (SemanticsActions.SetText !in config) continue

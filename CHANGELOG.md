@@ -2,10 +2,11 @@
 
 ## [Unreleased]
 
+- The d-pad and left stick move focus to the closest element in that direction, keep to the current row or column, and scroll lists to reach elements that are off screen. Focus stays inside an open popup or panel
 - When the d-pad or left stick can't move focus any further, the focused element gets an arrow key instead, so menus that move their own highlight work with a controller
 - Added `Modifier.focusEntry`, which makes focus land on the selected item when it moves into a row of choices such as tabs
 - Focus comes back to where you were after a menu, dialog or panel closes, or when the focused element disappears, instead of starting over from the top
-- Added `ComposeOptions.focusRing` for styling the focus ring, `Modifier.hidesFocusRing` for widgets with their own focus look, `Modifier.focusWhenShown` for panels that should take focus when a controller opens them, and `ComposeScreen.controllerGuide` for moving or hiding the button guide
+- Added `ComposeOptions.focusRing` for styling the focus ring, `Modifier.hidesFocusRing` for widgets with their own focus look, `Modifier.focusWhenShown` for panels that should take focus when a controller opens them, `Modifier.controllerFocusScope` for keeping focus inside a panel, and `ComposeScreen.controllerGuide` for moving or hiding the button guide
 - Added `Modifier.controllerArrows` for widgets such as sliders that want the d-pad's arrow keys before focus moves
 - A sends Enter to the focused element before the screen's own key handling, so screens that react to Enter no longer take presses away from the focused button
 - X opens the focused element's context menu when it supports the Menu key

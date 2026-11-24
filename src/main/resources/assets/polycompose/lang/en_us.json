@@ -21,6 +21,7 @@
   "polycompose.controller.category": "Menus (PolyCompose)",
   "polycompose.controller.select": "Select",
   "polycompose.controller.scroll": "Scroll",
+  "polycompose.controller.cursor": "Cursor",
   "polycompose.controller.options": "Options",
   "polycompose.binding.gui_left_trigger": "Menu: previous item",
   "polycompose.binding.gui_right_trigger": "Menu: next item",

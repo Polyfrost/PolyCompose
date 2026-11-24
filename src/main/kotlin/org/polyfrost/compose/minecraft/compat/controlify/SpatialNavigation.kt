@@ -20,37 +20,56 @@ internal object SpatialNavigation {
     private const val MAX_ATTEMPTS = 8
     private const val OVERLAP_TOLERANCE = 0.3f
     private const val ORTHOGONAL_WEIGHT_SIDEWAYS = 30f
-    private const val ORTHOGONAL_WEIGHT_VERTICAL = 2f
+    private const val ORTHOGONAL_WEIGHT_VERTICAL = 4f
+    private const val OUT_OF_BEAM_PENALTY = 2f
+    private const val SCROLL_FRACTION = 0.5f
 
-    fun move(owner: SemanticsOwner, from: Rect, focused: SemanticsNode?, direction: FocusDirection): Boolean {
-        if (focused != null && canScrollFurther(focused, direction)) return false
+    const val NONE = 0
+    const val MOVED = 1
+    const val SCROLLED = 2
+
+    fun move(owner: SemanticsOwner, from: Rect, focused: SemanticsNode?, direction: FocusDirection, allowScroll: Boolean = true): Int {
+        val scroller = focused?.let { scrollerFor(it, direction) }
         val scope = focused?.let(::scopeOf)
         val nodes = owner.getAllSemanticsNodes(mergingEnabled = false)
         val candidates = ArrayList<Pair<Float, SemanticsNode>>()
         for (node in nodes) {
             if (node.id == focused?.id) continue
             if (scope != null && !contains(scope, node)) continue
+            if (scroller != null && !contains(scroller, node)) continue
             if (SemanticsActions.RequestFocus !in node.config) continue
             val bounds = node.boundsInWindow
             if (bounds.width <= 0f || bounds.height <= 0f) continue
             val score = score(from, bounds, direction) ?: continue
             candidates += score to node
         }
-        if (candidates.isEmpty() && scope != null) return true
+        if (candidates.isEmpty() && scroller != null) return if (allowScroll && scroll(scroller, direction)) SCROLLED else NONE
+        if (candidates.isEmpty() && scope != null) return MOVED
         candidates.sortBy { it.first }
         for ((_, node) in candidates.take(MAX_ATTEMPTS)) {
-            if (focusEntryOf(node, focused)?.let { runCatching { it.requestFocus() }.getOrDefault(false) } == true) return true
+            if (focusEntryOf(node, focused)?.let { runCatching { it.requestFocus() }.getOrDefault(false) } == true) return MOVED
             val action = node.config.getOrNull(SemanticsActions.RequestFocus)?.action ?: continue
-            if (action()) return true
+            if (action()) return MOVED
         }
-        return false
+        return NONE
     }
 
-    private fun canScrollFurther(node: SemanticsNode, direction: FocusDirection): Boolean {
+    private fun scroll(scroller: SemanticsNode, direction: FocusDirection): Boolean {
+        val action = scroller.config.getOrNull(SemanticsActions.ScrollBy)?.action ?: return false
+        val bounds = scroller.boundsInWindow
+        val vertical = direction == FocusDirection.Up || direction == FocusDirection.Down
+        val range = scroller.config.getOrNull(if (vertical) SemanticsProperties.VerticalScrollAxisRange else SemanticsProperties.HorizontalScrollAxisRange)
+        val forward = direction == FocusDirection.Down || direction == FocusDirection.Right
+        val sign = if (forward != (range?.reverseScrolling == true)) 1f else -1f
+        val amount = (if (vertical) bounds.height else bounds.width) * SCROLL_FRACTION * sign
+        return runCatching { if (vertical) action(0f, amount) else action(amount, 0f) }.getOrDefault(false)
+    }
+
+    private fun scrollerFor(node: SemanticsNode, direction: FocusDirection): SemanticsNode? {
         val key = when (direction) {
             FocusDirection.Up, FocusDirection.Down -> SemanticsProperties.VerticalScrollAxisRange
             FocusDirection.Left, FocusDirection.Right -> SemanticsProperties.HorizontalScrollAxisRange
-            else -> return false
+            else -> return null
         }
         val forward = direction == FocusDirection.Down || direction == FocusDirection.Right
         var parent = node.parent
@@ -59,11 +78,11 @@ internal object SpatialNavigation {
             if (range != null) {
                 val value = range.value()
                 val further = if (forward != range.reverseScrolling) value < range.maxValue() - 0.5f else value > 0.5f
-                if (further) return true
+                if (further) return parent
             }
             parent = parent.parent
         }
-        return false
+        return null
     }
 
     private fun scopeOf(node: SemanticsNode): SemanticsNode? {
@@ -118,6 +137,7 @@ internal object SpatialNavigation {
         val centreOffset = if (vertical) abs(to.center.x - from.center.x) else abs(to.center.y - from.center.y)
         val weight = if (vertical) ORTHOGONAL_WEIGHT_VERTICAL else ORTHOGONAL_WEIGHT_SIDEWAYS
         val euclid = sqrt(gap * gap + orthogonal * orthogonal)
-        return euclid + gap + orthogonal * weight + centreOffset * 0.05f - sqrt(max(overlap, 0f))
+        val beamPenalty = if (overlap > 0f) 0f else OUT_OF_BEAM_PENALTY * max(from.width, from.height)
+        return euclid + gap + orthogonal * weight + centreOffset * 0.05f - sqrt(max(overlap, 0f)) + beamPenalty
     }
 }

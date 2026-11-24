@@ -26,7 +26,7 @@ public class ControllerTargets {
 
     private var focusClock = 0L
 
-    public var focusInside: ((Rect) -> Boolean)? = null
+    public var focusInside: ((Any) -> Boolean)? = null
 
     internal fun add(node: ControllerActionNode) {
         nodes += node

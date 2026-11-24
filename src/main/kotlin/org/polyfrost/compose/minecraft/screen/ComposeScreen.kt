@@ -61,6 +61,7 @@ import org.polyfrost.compose.minecraft.compat.controlify.FocusMark
 import org.polyfrost.compose.minecraft.compat.controlify.KeyboardPreview
 import org.polyfrost.compose.minecraft.compat.controlify.SceneFocus
 import org.polyfrost.compose.minecraft.compat.controlify.SceneSemantics
+import org.polyfrost.compose.minecraft.compat.controlify.SpatialNavigation
 import org.polyfrost.compose.minecraft.platform.HostEvents
 import org.polyfrost.compose.minecraft.platform.HostUriHandler
 import org.polyfrost.compose.minecraft.platform.SystemClipboard
@@ -1362,8 +1363,8 @@ abstract class ComposeScreen(
     }
 
     internal val actionTargets = ControllerTargets().also { targets ->
-        targets.focusInside = { area ->
-            val moved = controllerSemantics?.focusFirstIn(area) == true
+        targets.focusInside = { token ->
+            val moved = controllerSemantics?.focusFirstIn(token) == true
             if (moved) {
                 controllerFocusVisible = true
                 sceneDirty = true
@@ -1406,6 +1407,24 @@ abstract class ComposeScreen(
 
     private val focusTrail = ArrayList<FocusMark>()
 
+    private var pendingSpatial: FocusDirection? = null
+
+    private var pendingTicks = 0
+
+    internal fun controllerRetryPending() {
+        val direction = pendingSpatial ?: return
+        if (!showing || liveScene() == null || --pendingTicks < 0) {
+            pendingSpatial = null
+            return
+        }
+        val result = withScene { controllerSemantics?.moveSpatially(direction, scroll = false) }
+        if (result == SpatialNavigation.MOVED) {
+            pendingSpatial = null
+            controllerFocusVisible = true
+            sceneDirty = true
+        }
+    }
+
     internal fun controllerKeepFocus() {
         if (!showing || liveScene() == null) return
         val semantics = controllerSemantics ?: return
@@ -1442,7 +1461,15 @@ abstract class ComposeScreen(
         val moved = if (manager.getFocusRect(false) == null) {
             manager.takeFocus(FocusDirection.Next) || focus?.moveFocus(FocusDirection.Next) == true
         } else {
-            controllerSemantics?.moveSpatially(direction) == true || focus?.moveFocus(direction) == true
+            when (controllerSemantics?.moveSpatially(direction)) {
+                SpatialNavigation.MOVED -> true
+                SpatialNavigation.SCROLLED -> {
+                    pendingSpatial = direction
+                    pendingTicks = PENDING_SPATIAL_TICKS
+                    true
+                }
+                else -> focus?.moveFocus(direction) == true
+            }
         }
         if (moved || !controllerFocusVisible) {
             controllerFocusVisible = true
@@ -1499,6 +1526,8 @@ abstract class ComposeScreen(
         const val MAX_SCENE_REBUILDS = 3
 
         const val MAX_FOCUS_TRAIL = 32
+
+        const val PENDING_SPATIAL_TICKS = 8
     }
 }
 
