@@ -58,6 +58,7 @@ import org.polyfrost.compose.host.controller.LocalControllerTargets
 import org.polyfrost.compose.minecraft.compat.controlify.ControllerBridge
 import org.polyfrost.compose.minecraft.compat.controlify.FieldPreview
 import org.polyfrost.compose.minecraft.compat.controlify.FocusMark
+import org.polyfrost.compose.minecraft.compat.controlify.FocusedNode
 import org.polyfrost.compose.minecraft.compat.controlify.KeyboardPreview
 import org.polyfrost.compose.minecraft.compat.controlify.SceneFocus
 import org.polyfrost.compose.minecraft.compat.controlify.SceneSemantics
@@ -1164,11 +1165,12 @@ abstract class ComposeScreen(
         HostCallbacks.call(options, "ComposeOptions.consumeMouse", false) { options.consumeMouse(this, code, pressed) }
 
     private fun reportInputKind(kind: InputKind) {
+        if (kind != InputKind.Controller) pendingSpatial = null
         HostCallbacks.call(options, "ComposeOptions.onInputKind", Unit) { options.onInputKind(this, kind) }
     }
 
     private fun dispatchKeyPressed(bindingKey: Int, shortcutKey: Int, modifiers: Int): Boolean {
-        if (bindingKey in navigationKeys) reportInputKind(InputKind.Keyboard)
+        if (bindingKey in navigationKeys) reportInputKind(if (Controllers.isDispatching) InputKind.Controller else InputKind.Keyboard)
         if (bindingKey == InputConstants.KEY_ESCAPE) {
             if (HostCallbacks.call(options, "ComposeOptions.consumeEscape", false) { options.consumeEscape(this) }) {
                 consumedKeys += bindingKey
@@ -1316,8 +1318,10 @@ abstract class ComposeScreen(
     internal fun controllerKey(key: Int, pressed: Boolean, modifiers: Int = 0): Boolean {
         if (!showing) return false
         val shortcut = controllerShortcut(key)
-        if (pressed) return dispatchKeyPressed(key, shortcut, modifiers)
-        return !consumedKeys.remove(key) && sendKeyReleasedEvent(key, shortcut, modifiers)
+        return Controllers.dispatching {
+            if (pressed) dispatchKeyPressed(key, shortcut, modifiers)
+            else !consumedKeys.remove(key) && sendKeyReleasedEvent(key, shortcut, modifiers)
+        }
     }
 
     private fun controllerShortcut(key: Int): Int {
@@ -1329,7 +1333,7 @@ abstract class ComposeScreen(
 
     internal fun controllerChar(char: Char, modifiers: Int = 0): Boolean {
         if (!showing) return false
-        return sendCharacterEvent(char, char.code, modifiers)
+        return Controllers.dispatching { sendCharacterEvent(char, char.code, modifiers) }
     }
 
     internal fun controllerBack(): Boolean {
@@ -1357,8 +1361,7 @@ abstract class ComposeScreen(
         val shortcut = controllerShortcut(key)
         return Controllers.dispatching {
             val consumed = sendKeyPressedEvent(key, shortcut, 0)
-            sendKeyReleasedEvent(key, shortcut, 0)
-            consumed
+            sendKeyReleasedEvent(key, shortcut, 0) || consumed
         }
     }
 
@@ -1371,6 +1374,7 @@ abstract class ComposeScreen(
             }
             moved
         }
+        targets.activeLayers = { controllerSemantics?.activeLayers() }
     }
 
     internal fun controllerHints(): List<ControllerHint> = if (liveScene() == null) emptyList() else actionTargets.hints()
@@ -1387,15 +1391,17 @@ abstract class ComposeScreen(
     internal fun controllerNavigate(direction: FocusDirection, arrowKey: Int): Boolean {
         if (!showing) return false
         reportInputKind(InputKind.Controller)
+        pendingSpatial = null
         val focused = withScene { it.focusManager.getFocusRect(false) } != null
         if (!focused) {
             controllerKeepFocus()
             if (withScene { it.focusManager.getFocusRect(false) } != null) return true
         }
         val arrows = focused && controllerTextField() == null
-        if (arrows && controllerSemantics?.focusedArrows()?.covers(direction) == true && tapArrow(arrowKey)) return true
+        val claimed = arrows && controllerSemantics?.focusedArrows()?.covers(direction) == true
+        if (claimed && tapArrow(arrowKey)) return true
         if (controllerMoveFocus(direction)) return true
-        return arrows && tapArrow(arrowKey)
+        return arrows && !claimed && tapArrow(arrowKey)
     }
 
     private fun tapArrow(arrowKey: Int): Boolean {
@@ -1411,13 +1417,15 @@ abstract class ComposeScreen(
 
     private var pendingTicks = 0
 
+    private var pendingFrom: FocusedNode? = null
+
     internal fun controllerRetryPending() {
         val direction = pendingSpatial ?: return
-        if (!showing || liveScene() == null || --pendingTicks < 0) {
+        if (!showing || !Controllers.isActive || liveScene() == null || --pendingTicks < 0 || controllerSemantics?.focusedNode() != pendingFrom) {
             pendingSpatial = null
             return
         }
-        val result = withScene { controllerSemantics?.moveSpatially(direction, scroll = false) }
+        val result = withScene { Controllers.dispatching { controllerSemantics?.moveSpatially(direction, scroll = false) } }
         if (result == SpatialNavigation.MOVED) {
             pendingSpatial = null
             controllerFocusVisible = true
@@ -1425,7 +1433,7 @@ abstract class ComposeScreen(
         }
     }
 
-    internal fun controllerKeepFocus() {
+    internal fun controllerKeepFocus(restore: Boolean = true) {
         if (!showing || liveScene() == null) return
         val semantics = controllerSemantics ?: return
         val mark = semantics.focusedMark()
@@ -1437,6 +1445,7 @@ abstract class ComposeScreen(
             }
             return
         }
+        if (!restore) return
         focusTrail.removeAll { !semantics.isAlive(it.owner) }
         val newest = focusTrail.lastOrNull() ?: return
         val restored = withScene {
@@ -1456,19 +1465,24 @@ abstract class ComposeScreen(
 
     internal fun controllerMoveFocus(direction: FocusDirection): Boolean = withScene { scene ->
         reportInputKind(InputKind.Controller)
+        pendingSpatial = null
         val manager = scene.focusManager
         val focus = SceneFocus.of(manager) ?: controllerFocus
-        val moved = if (manager.getFocusRect(false) == null) {
-            manager.takeFocus(FocusDirection.Next) || focus?.moveFocus(FocusDirection.Next) == true
-        } else {
-            when (controllerSemantics?.moveSpatially(direction)) {
-                SpatialNavigation.MOVED -> true
-                SpatialNavigation.SCROLLED -> {
-                    pendingSpatial = direction
-                    pendingTicks = PENDING_SPATIAL_TICKS
-                    true
+        val moved = Controllers.dispatching {
+            if (manager.getFocusRect(false) == null) {
+                manager.takeFocus(FocusDirection.Next) || focus?.moveFocus(FocusDirection.Next) == true
+            } else {
+                when (controllerSemantics?.moveSpatially(direction)) {
+                    SpatialNavigation.MOVED -> true
+                    SpatialNavigation.SCROLLED -> {
+                        pendingSpatial = direction
+                        pendingTicks = PENDING_SPATIAL_TICKS
+                        pendingFrom = controllerSemantics?.focusedNode()
+                        true
+                    }
+                    SpatialNavigation.BLOCKED -> false
+                    else -> focus?.moveFocus(direction) == true
                 }
-                else -> focus?.moveFocus(direction) == true
             }
         }
         if (moved || !controllerFocusVisible) {
@@ -1481,14 +1495,31 @@ abstract class ComposeScreen(
     internal fun controllerScroll(delta: Offset) {
         if (delta == Offset.Zero || !showing) return
         reportInputKind(InputKind.Controller)
-        val pointer = pointerPosition()
-        val anchor = withScene { it.focusManager.getFocusRect(false)?.center } ?: pointer
         wheel.stop()
-        withScene {
-            it.sendPointerEvent(PointerEventType.Move, anchor)
-            Controllers.dispatching { SceneWheel.scrollDirect(it, anchor, delta) }
-            if (anchor != pointer) it.sendPointerEvent(PointerEventType.Move, pointer)
+        val pan = withScene { controllerSemantics?.focusedPan() }
+        if (pan != null) {
+            withScene { Controllers.dispatching { pan(delta) } }
+            sceneDirty = true
+            return
         }
+        val pointer = pointerPosition()
+        val anchor = withScene { it.focusManager.getFocusRect(false)?.let(::visibleCenter) } ?: pointer
+        withScene {
+            Controllers.dispatching {
+                it.sendPointerEvent(PointerEventType.Move, anchor)
+                SceneWheel.scrollDirect(it, anchor, delta)
+                if (anchor != pointer) it.sendPointerEvent(PointerEventType.Move, pointer)
+            }
+        }
+    }
+
+    private fun visibleCenter(focus: Rect): Offset {
+        val window = Rect(0f, 0f, McWindow.windowWidth().toFloat(), McWindow.windowHeight().toFloat())
+        val visible = focus.intersect(window)
+        if (visible.width > 0f && visible.height > 0f) return visible.center
+        val center = focus.center
+        if (window.width < 1f || window.height < 1f) return center
+        return Offset(center.x.coerceIn(window.left, window.right - 1f), center.y.coerceIn(window.top, window.bottom - 1f))
     }
 
     internal fun controllerTargets(action: (Rect) -> Unit) {

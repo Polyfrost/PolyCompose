@@ -27,12 +27,24 @@ internal object SpatialNavigation {
     const val NONE = 0
     const val MOVED = 1
     const val SCROLLED = 2
+    const val BLOCKED = 3
 
-    fun move(owner: SemanticsOwner, from: Rect, focused: SemanticsNode?, direction: FocusDirection, allowScroll: Boolean = true): Int {
+    fun move(
+        owner: SemanticsOwner,
+        from: Rect,
+        focused: SemanticsNode?,
+        direction: FocusDirection,
+        allowScroll: Boolean = true,
+        enter: Boolean = true,
+    ): Int {
         val scroller = focused?.let { scrollerFor(it, direction) }
         val scope = focused?.let(::scopeOf)
+        if (focused != null && scope != null && (direction == FocusDirection.Next || direction == FocusDirection.Previous)) {
+            return step(scope, focused, direction == FocusDirection.Next)
+        }
         val nodes = owner.getAllSemanticsNodes(mergingEnabled = false)
         val candidates = ArrayList<Pair<Float, SemanticsNode>>()
+        val inside = ArrayList<Triple<Float, Float, SemanticsNode>>()
         for (node in nodes) {
             if (node.id == focused?.id) continue
             if (scope != null && !contains(scope, node)) continue
@@ -40,18 +52,54 @@ internal object SpatialNavigation {
             if (SemanticsActions.RequestFocus !in node.config) continue
             val bounds = node.boundsInWindow
             if (bounds.width <= 0f || bounds.height <= 0f) continue
-            val score = score(from, bounds, direction) ?: continue
-            candidates += score to node
+            val score = score(from, bounds, direction)
+            if (score != null) {
+                candidates += score to node
+            } else if (enter && focused != null && contains(focused, node)) {
+                inside += entryKey(from, node, direction) ?: continue
+            }
         }
-        if (candidates.isEmpty() && scroller != null) return if (allowScroll && scroll(scroller, direction)) SCROLLED else NONE
-        if (candidates.isEmpty() && scope != null) return MOVED
+        if (candidates.isEmpty()) {
+            inside.sortWith(compareBy({ it.first }, { it.second }))
+            if (focusFirst(inside.map { it.third }, focused)) return MOVED
+            if (scroller != null) {
+                if (allowScroll && scroll(scroller, direction)) return SCROLLED
+                return if (scope != null) BLOCKED else NONE
+            }
+            if (scope != null) return BLOCKED
+        }
         candidates.sortBy { it.first }
-        for ((_, node) in candidates.take(MAX_ATTEMPTS)) {
+        if (focusFirst(candidates.map { it.second }, focused)) return MOVED
+        return if (scope != null) BLOCKED else NONE
+    }
+
+    private fun focusFirst(candidates: List<SemanticsNode>, focused: SemanticsNode?): Boolean {
+        for (node in candidates.take(MAX_ATTEMPTS)) {
+            if (focusEntryOf(node, focused)?.let { runCatching { it.requestFocus() }.getOrDefault(false) } == true) return true
+            val action = node.config.getOrNull(SemanticsActions.RequestFocus)?.action ?: continue
+            if (action()) return true
+        }
+        return false
+    }
+
+    private fun step(scope: SemanticsNode, focused: SemanticsNode, forward: Boolean): Int {
+        val inScope = ArrayList<SemanticsNode>()
+        collectFocusable(scope, focused.id, inScope)
+        val order = if (forward) inScope else inScope.asReversed()
+        val index = order.indexOfFirst { it.id == focused.id }
+        val next = order.drop(index + 1) + order.take(max(index, 0))
+        for (node in next.take(MAX_ATTEMPTS)) {
             if (focusEntryOf(node, focused)?.let { runCatching { it.requestFocus() }.getOrDefault(false) } == true) return MOVED
             val action = node.config.getOrNull(SemanticsActions.RequestFocus)?.action ?: continue
-            if (action()) return MOVED
+            if (runCatching { action() }.getOrDefault(false)) return MOVED
         }
-        return NONE
+        return BLOCKED
+    }
+
+    private fun collectFocusable(node: SemanticsNode, focusedId: Int, out: MutableList<SemanticsNode>) {
+        val bounds = node.boundsInWindow
+        if (node.id == focusedId || SemanticsActions.RequestFocus in node.config && bounds.width > 0f && bounds.height > 0f) out += node
+        for (child in node.children) collectFocusable(child, focusedId, out)
     }
 
     private fun scroll(scroller: SemanticsNode, direction: FocusDirection): Boolean {
@@ -72,24 +120,24 @@ internal object SpatialNavigation {
             else -> return null
         }
         val forward = direction == FocusDirection.Down || direction == FocusDirection.Right
-        var parent = node.parent
-        while (parent != null) {
-            val range = parent.config.getOrNull(key)
-            if (range != null) {
+        var current: SemanticsNode? = node
+        while (current != null) {
+            val range = current.config.getOrNull(key)
+            if (range != null && SemanticsActions.ScrollBy in current.config) {
                 val value = range.value()
                 val further = if (forward != range.reverseScrolling) value < range.maxValue() - 0.5f else value > 0.5f
-                if (further) return parent
+                if (further) return current
             }
-            parent = parent.parent
+            current = current.parent
         }
         return null
     }
 
     private fun scopeOf(node: SemanticsNode): SemanticsNode? {
-        var parent = node.parent
-        while (parent != null) {
-            if (FocusScopeKey in parent.config) return parent
-            parent = parent.parent
+        var current: SemanticsNode? = node
+        while (current != null) {
+            if (FocusScopeKey in current.config) return current
+            current = current.parent
         }
         return null
     }
@@ -111,6 +159,20 @@ internal object SpatialNavigation {
             current = current.parent
         }
         return false
+    }
+
+    private fun entryKey(from: Rect, node: SemanticsNode, direction: FocusDirection): Triple<Float, Float, SemanticsNode>? {
+        val to = node.boundsInWindow
+        val edge = when (direction) {
+            FocusDirection.Down -> to.top
+            FocusDirection.Up -> -to.bottom
+            FocusDirection.Right -> to.left
+            FocusDirection.Left -> -to.right
+            else -> return null
+        }
+        val vertical = direction == FocusDirection.Up || direction == FocusDirection.Down
+        val offset = if (vertical) abs(to.center.x - from.center.x) else abs(to.center.y - from.center.y)
+        return Triple(edge, offset, node)
     }
 
     private fun score(from: Rect, to: Rect, direction: FocusDirection): Float? {

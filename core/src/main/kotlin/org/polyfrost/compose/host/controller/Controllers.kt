@@ -28,6 +28,8 @@ public object Controllers {
 
     private val lookCaptures = AtomicInteger()
 
+    private val gameplayCaptures = AtomicInteger()
+
     private var dispatchDepth = 0
 
     @JvmStatic
@@ -44,7 +46,11 @@ public object Controllers {
 
     @JvmStatic
     public val isLookCaptured: Boolean
-        get() = lookCaptures.get() > 0
+        get() = lookCaptures.get() > 0 || gameplayCaptures.get() > 0
+
+    @JvmStatic
+    public val isGameplayCaptured: Boolean
+        get() = gameplayCaptures.get() > 0
 
     @JvmStatic
     public val leftStick: Offset
@@ -62,20 +68,20 @@ public object Controllers {
         defaultButton: ControllerButton = ControllerButton.NONE,
         category: String = id.substringBefore(':'),
         radial: Boolean = false,
+        context: ControllerContext = ControllerContext.Gameplay,
     ): ControllerAction {
         require(ID_PATTERN.matches(id)) { "Controller action id must look like namespace:path, got '$id'" }
-        val action = ControllerAction(ControllerActionSpec(id, name, defaultButton, category, radial))
+        val action = ControllerAction(ControllerActionSpec(id, name, defaultButton, category, radial, context))
         actions += action
         backend?.let { bind(it, action) }
         return action
     }
 
     @JvmStatic
-    public fun captureLook(): AutoCloseable {
-        lookCaptures.incrementAndGet()
-        val open = AtomicBoolean(true)
-        return AutoCloseable { if (open.compareAndSet(true, false)) lookCaptures.decrementAndGet() }
-    }
+    public fun captureLook(): AutoCloseable = capture(lookCaptures)
+
+    @JvmStatic
+    public fun captureGameplay(): AutoCloseable = capture(gameplayCaptures)
 
     @ApiStatus.Internal
     @JvmStatic
@@ -142,6 +148,12 @@ public object Controllers {
         }
     }
 
+    private fun capture(counter: AtomicInteger): AutoCloseable {
+        counter.incrementAndGet()
+        val open = AtomicBoolean(true)
+        return AutoCloseable { if (open.compareAndSet(true, false)) counter.decrementAndGet() }
+    }
+
     private fun stick(right: Boolean): Offset {
         val current = backend ?: return Offset.Zero
         return HostCallbacks.call(current, "ControllerBackend.stick", Offset.Zero) { current.stick(right) }
@@ -151,12 +163,13 @@ public object Controllers {
 public val KeyEvent.isFromController: Boolean
     get() = Controllers.isDispatching
 
-public class ControllerActionSpec(
+public class ControllerActionSpec @JvmOverloads constructor(
     public val id: String,
     public val name: String,
     public val defaultButton: ControllerButton,
     public val category: String,
     public val radial: Boolean,
+    public val context: ControllerContext = ControllerContext.Gameplay,
 )
 
 @ApiStatus.Internal

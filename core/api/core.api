@@ -908,7 +908,10 @@ public final class org/polyfrost/compose/host/controller/ControllerAction : java
 public final class org/polyfrost/compose/host/controller/ControllerActionSpec {
 	public static final field $stable I
 	public fun <init> (Ljava/lang/String;Ljava/lang/String;Lorg/polyfrost/compose/host/controller/ControllerButton;Ljava/lang/String;Z)V
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;Lorg/polyfrost/compose/host/controller/ControllerButton;Ljava/lang/String;ZLorg/polyfrost/compose/host/controller/ControllerContext;)V
+	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;Lorg/polyfrost/compose/host/controller/ControllerButton;Ljava/lang/String;ZLorg/polyfrost/compose/host/controller/ControllerContext;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun getCategory ()Ljava/lang/String;
+	public final fun getContext ()Lorg/polyfrost/compose/host/controller/ControllerContext;
 	public final fun getDefaultButton ()Lorg/polyfrost/compose/host/controller/ControllerButton;
 	public final fun getId ()Ljava/lang/String;
 	public final fun getName ()Ljava/lang/String;
@@ -956,6 +959,15 @@ public final class org/polyfrost/compose/host/controller/ControllerButton : java
 	public static fun values ()[Lorg/polyfrost/compose/host/controller/ControllerButton;
 }
 
+public final class org/polyfrost/compose/host/controller/ControllerContext : java/lang/Enum {
+	public static final field Anywhere Lorg/polyfrost/compose/host/controller/ControllerContext;
+	public static final field Gameplay Lorg/polyfrost/compose/host/controller/ControllerContext;
+	public static final field Screens Lorg/polyfrost/compose/host/controller/ControllerContext;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Lorg/polyfrost/compose/host/controller/ControllerContext;
+	public static fun values ()[Lorg/polyfrost/compose/host/controller/ControllerContext;
+}
+
 public final class org/polyfrost/compose/host/controller/ControllerGuide : java/lang/Enum {
 	public static final field BottomCenter Lorg/polyfrost/compose/host/controller/ControllerGuide;
 	public static final field BottomLeft Lorg/polyfrost/compose/host/controller/ControllerGuide;
@@ -989,6 +1001,7 @@ public final class org/polyfrost/compose/host/controller/ControllerTargetsKt {
 public final class org/polyfrost/compose/host/controller/Controllers {
 	public static final field $stable I
 	public static final field INSTANCE Lorg/polyfrost/compose/host/controller/Controllers;
+	public static final fun captureGameplay ()Ljava/lang/AutoCloseable;
 	public static final fun captureLook ()Ljava/lang/AutoCloseable;
 	public final fun enterDispatch ()V
 	public final fun exitDispatch ()V
@@ -997,12 +1010,14 @@ public final class org/polyfrost/compose/host/controller/Controllers {
 	public static final fun isActive ()Z
 	public static final fun isAvailable ()Z
 	public static final fun isDispatching ()Z
+	public static final fun isGameplayCaptured ()Z
 	public static final fun isLookCaptured ()Z
 	public static final fun register (Ljava/lang/String;Ljava/lang/String;)Lorg/polyfrost/compose/host/controller/ControllerAction;
 	public static final fun register (Ljava/lang/String;Ljava/lang/String;Lorg/polyfrost/compose/host/controller/ControllerButton;)Lorg/polyfrost/compose/host/controller/ControllerAction;
 	public static final fun register (Ljava/lang/String;Ljava/lang/String;Lorg/polyfrost/compose/host/controller/ControllerButton;Ljava/lang/String;)Lorg/polyfrost/compose/host/controller/ControllerAction;
 	public static final fun register (Ljava/lang/String;Ljava/lang/String;Lorg/polyfrost/compose/host/controller/ControllerButton;Ljava/lang/String;Z)Lorg/polyfrost/compose/host/controller/ControllerAction;
-	public static synthetic fun register$default (Ljava/lang/String;Ljava/lang/String;Lorg/polyfrost/compose/host/controller/ControllerButton;Ljava/lang/String;ZILjava/lang/Object;)Lorg/polyfrost/compose/host/controller/ControllerAction;
+	public static final fun register (Ljava/lang/String;Ljava/lang/String;Lorg/polyfrost/compose/host/controller/ControllerButton;Ljava/lang/String;ZLorg/polyfrost/compose/host/controller/ControllerContext;)Lorg/polyfrost/compose/host/controller/ControllerAction;
+	public static synthetic fun register$default (Ljava/lang/String;Ljava/lang/String;Lorg/polyfrost/compose/host/controller/ControllerButton;Ljava/lang/String;ZLorg/polyfrost/compose/host/controller/ControllerContext;ILjava/lang/Object;)Lorg/polyfrost/compose/host/controller/ControllerAction;
 }
 
 public final class org/polyfrost/compose/host/controller/ControllersKt {

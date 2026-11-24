@@ -5,11 +5,13 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusEventModifierNode
 import androidx.compose.ui.focus.FocusState
-import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.layout.LayoutCoordinates
+import androidx.compose.ui.layout.findRootCoordinates
 import androidx.compose.ui.node.CompositionLocalConsumerModifierNode
 import androidx.compose.ui.node.ModifierNodeElement
 import androidx.compose.ui.node.TraversableNode
 import androidx.compose.ui.node.currentValueOf
+import androidx.compose.ui.node.requireLayoutCoordinates
 import androidx.compose.ui.node.traverseAncestors
 import androidx.compose.ui.platform.InspectorInfo
 import org.jetbrains.annotations.ApiStatus
@@ -28,6 +30,8 @@ public class ControllerTargets {
 
     public var focusInside: ((Any) -> Boolean)? = null
 
+    public var activeLayers: (() -> List<LayoutCoordinates>?)? = null
+
     internal fun add(node: ControllerActionNode) {
         nodes += node
     }
@@ -38,10 +42,10 @@ public class ControllerTargets {
 
     internal fun nextFocusTick(): Long = ++focusClock
 
-    public fun handles(button: ControllerButton): Boolean = pick(button) != null
+    public fun handles(button: ControllerButton): Boolean = pick(button, activeRoots()) != null
 
     public fun dispatch(button: ControllerButton): Boolean {
-        val node = pick(button) ?: return false
+        val node = pick(button, activeRoots()) ?: return false
         val press = node.onPress
         Controllers.dispatching {
             HostCallbacks.call(press, "Modifier.controllerAction", Unit) { press() }
@@ -51,21 +55,28 @@ public class ControllerTargets {
 
     public fun hints(): List<ControllerHint> {
         if (nodes.isEmpty()) return emptyList()
+        val roots = activeRoots()
         val hints = ArrayList<ControllerHint>()
         for (button in ControllerButton.entries) {
             if (button == ControllerButton.NONE) continue
-            val label = pick(button)?.label ?: continue
+            val label = pick(button, roots)?.label ?: continue
             hints += ControllerHint(button, label)
         }
         return hints
     }
 
-    private fun pick(button: ControllerButton): ControllerActionNode? {
+    private fun activeRoots(): List<LayoutCoordinates>? {
+        val layers = activeLayers ?: return null
+        return runCatching { layers()?.map { it.findRootCoordinates() } }.getOrNull()
+    }
+
+    private fun pick(button: ControllerButton, roots: List<LayoutCoordinates>?): ControllerActionNode? {
         if (nodes.isEmpty()) return null
         var focused: ArrayList<ControllerActionNode>? = null
         var fallback: ControllerActionNode? = null
         for (node in nodes) {
             if (node.button != button || !node.enabled || !node.isAttached) continue
+            if (roots != null && !node.isInLayers(roots)) continue
             if (node.focused) {
                 (focused ?: ArrayList<ControllerActionNode>().also { focused = it }) += node
             } else if (!node.requireFocus) {
@@ -170,6 +181,11 @@ internal class ControllerActionNode(
         if (now && !focused) focusedAt = targets?.nextFocusTick() ?: 0L
         focused = now
     }
+
+    fun isInLayers(roots: List<LayoutCoordinates>): Boolean = runCatching {
+        val root = requireLayoutCoordinates().findRootCoordinates()
+        roots.any { it === root }
+    }.getOrDefault(false)
 
     private object TraverseKey
 }

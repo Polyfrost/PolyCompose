@@ -42,7 +42,8 @@ class PolyComposeControlify : ControlifyEntrypoint {
     override fun onControlifyInit(context: InitContext) {
         try {
             ControlifyEvents.ACTIVE_CONTROLLER_TICKED.register { event -> onControllerTick(event.controller()) }
-            ControlifyEvents.INPUT_MODE_CHANGED.register { event -> Controllers.reportActive(event.mode().isController) }
+            ControlifyEvents.CONTROLLER_STATE_UPDATE.register { event -> onControllerUpdate(event.controller()) }
+            ControlifyEvents.INPUT_MODE_CHANGED.register { event -> MixedInput.onModeChanged(event.mode()) }
             ControlifyEvents.LOOK_INPUT_MODIFIER.register { event ->
                 if (Controllers.isLookCaptured) event.lookInput().zero()
             }
@@ -53,7 +54,7 @@ class PolyComposeControlify : ControlifyEntrypoint {
 
     override fun onControllersDiscovered(controlify: ControlifyApi) {
         try {
-            Controllers.reportActive(controlify.currentInputMode().isController)
+            MixedInput.onModeChanged(controlify.currentInputMode())
         } catch (t: Throwable) {
             HostErrors.warn("Could not read the controller input mode", t, LOGGER)
         }
@@ -62,9 +63,18 @@ class PolyComposeControlify : ControlifyEntrypoint {
     private fun onControllerTick(controller: ControllerEntity) {
         try {
             Controllers.tick()
+            GameplayCapture.releaseSneak()
             routeHudScroll(controller)
         } catch (t: Throwable) {
             HostErrors.warn("Controller tick failed", t, LOGGER)
+        }
+    }
+
+    private fun onControllerUpdate(controller: ControllerEntity) {
+        try {
+            MixedInput.onControllerUpdate(controller)
+        } catch (t: Throwable) {
+            HostErrors.warn("Could not track mixed controller input", t, LOGGER)
         }
     }
 

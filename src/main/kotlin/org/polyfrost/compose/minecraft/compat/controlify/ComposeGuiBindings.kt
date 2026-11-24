@@ -3,6 +3,7 @@ package org.polyfrost.compose.minecraft.compat.controlify
 //? if > 1.8.9 {
 import dev.isxander.controlify.api.bind.InputBindingSupplier
 import dev.isxander.controlify.bindings.ControlifyBindings
+import dev.isxander.controlify.bindings.input.EmptyInput
 import dev.isxander.controlify.controller.ControllerEntity
 import java.util.EnumMap
 import net.minecraft.network.chat.Component
@@ -32,11 +33,11 @@ internal object ComposeGuiBindings {
         register(ControllerButton.RIGHT_TRIGGER, "gui_right_trigger")
         register(ControllerButton.RIGHT_STICK, "gui_right_stick")
         register(ControllerButton.START, "gui_start")
-        register(ControllerButton.BACK, "gui_back")
+        register(ControllerButton.BACK, "gui_back", ControllerButton.NONE)
     }
 
-    private fun register(button: ControllerButton, path: String) {
-        ControlifyActions.registerGuiBinding("polycompose:$path", "polycompose.binding.$path", button)?.let { registered[button] = it }
+    private fun register(button: ControllerButton, path: String, defaultButton: ControllerButton = button) {
+        ControlifyActions.registerGuiBinding("polycompose:$path", "polycompose.binding.$path", defaultButton)?.let { registered[button] = it }
     }
 
     fun hasBinding(button: ControllerButton): Boolean = supplier(button) != null
@@ -44,7 +45,11 @@ internal object ComposeGuiBindings {
     fun justPressed(controller: ControllerEntity, button: ControllerButton): Boolean =
         supplier(button)?.onOrNull(controller)?.justPressed() == true
 
-    fun glyph(button: ControllerButton): Component? = supplier(button)?.inputGlyph()
+    fun glyph(controller: ControllerEntity, button: ControllerButton): Component? {
+        val supplier = supplier(button) ?: return null
+        if (supplier.onOrNull(controller)?.boundInput() is EmptyInput) return null
+        return supplier.inputGlyph()
+    }
 
     private fun supplier(button: ControllerButton): InputBindingSupplier? = when (button) {
         ControllerButton.A -> ControlifyBindings.GUI_PRESS

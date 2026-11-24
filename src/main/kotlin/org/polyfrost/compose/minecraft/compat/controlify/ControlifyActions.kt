@@ -16,12 +16,16 @@ import dev.isxander.controlify.bindings.input.Input
 import dev.isxander.controlify.controller.ControllerEntity
 import dev.isxander.controlify.controller.input.GamepadInputs
 import dev.isxander.controlify.controller.input.InputComponent
+import java.util.Collections
+import java.util.concurrent.ConcurrentHashMap
+import net.minecraft.client.Minecraft
 import net.minecraft.network.chat.Component
 import org.apache.logging.log4j.LogManager
 import org.polyfrost.compose.host.controller.ControllerActionSpec
 import org.polyfrost.compose.host.controller.ControllerActionState
 import org.polyfrost.compose.host.controller.ControllerBackend
 import org.polyfrost.compose.host.controller.ControllerButton
+import org.polyfrost.compose.host.controller.ControllerContext
 import org.polyfrost.compose.minecraft.platform.LoadedMods
 
 internal object ControlifyActions : ControllerBackend {
@@ -31,13 +35,22 @@ internal object ControlifyActions : ControllerBackend {
 
     private val bindings = HashMap<String, InputBindingSupplier>()
 
+    private val actionIds: MutableSet<Any> = Collections.newSetFromMap(ConcurrentHashMap())
+
     @Volatile
     private var locked = false
 
     override fun register(spec: ControllerActionSpec): ControllerActionState {
-        val supplier = synchronized(bindings) { bindings[spec.id] ?: tryRegister(spec)?.also { bindings[spec.id] = it } }
-        return if (supplier != null) BindingState(supplier) else RawState(inputFor(spec.defaultButton))
+        val supplier = synchronized(bindings) {
+            bindings[spec.id] ?: tryRegister(spec)?.also {
+                bindings[spec.id] = it
+                actionIds += it.bindId()
+            }
+        }
+        return if (supplier != null) BindingState(supplier) else RawState(inputFor(spec.defaultButton), bindContext(spec.context))
     }
+
+    fun isAction(binding: InputBinding): Boolean = binding.id() in actionIds
 
     override fun stick(right: Boolean): Offset {
         val state = currentController()?.input()?.orElse(null)?.stateNow() ?: return Offset.Zero
@@ -55,10 +68,16 @@ internal object ControlifyActions : ControllerBackend {
     }
 
     fun registerGuiBinding(id: String, name: String, button: ControllerButton): InputBindingSupplier? =
-        tryRegister(ControllerActionSpec(id, name, button, "polycompose.controller.category", false), BindContext.ANY_SCREEN)
+        tryRegister(ControllerActionSpec(id, name, button, "polycompose.controller.category", false, ControllerContext.Screens))
+
+    private fun bindContext(context: ControllerContext): BindContext? = when (context) {
+        ControllerContext.Gameplay -> BindContext.IN_GAME
+        ControllerContext.Screens -> BindContext.ANY_SCREEN
+        ControllerContext.Anywhere -> null
+    }
 
     @Suppress("DEPRECATION")
-    private fun tryRegister(spec: ControllerActionSpec, context: BindContext? = null): InputBindingSupplier? {
+    private fun tryRegister(spec: ControllerActionSpec): InputBindingSupplier? {
         if (locked) return null
         val namespace = spec.id.substringBefore(':')
         val path = spec.id.substringAfter(':')
@@ -68,7 +87,7 @@ internal object ControlifyActions : ControllerBackend {
                     .name(Component.translatable(spec.name))
                     .category(Component.translatableWithFallback(spec.category, LoadedMods.name(spec.category) ?: spec.category))
                     .defaultInput(inputFor(spec.defaultButton))
-                if (context != null) builder.allowedContexts(context)
+                bindContext(spec.context)?.let { builder.allowedContexts(it) }
                 //? if >= 26.1 {
                 if (spec.radial) builder.radialCandidate(true)
                 //?} else
@@ -115,11 +134,14 @@ internal object ControlifyActions : ControllerBackend {
         override fun justPressed(): Boolean = binding()?.justPressed() == true
     }
 
-    private class RawState(private val input: Input) : ControllerActionState {
+    private class RawState(private val input: Input, private val context: BindContext?) : ControllerActionState {
         override val isRebindable: Boolean
             get() = false
 
-        private fun inputs(): InputComponent? = currentController()?.input()?.orElse(null)
+        private fun inputs(): InputComponent? {
+            if (context != null && context.isApplicable().apply(Minecraft.getInstance()) != true) return null
+            return currentController()?.input()?.orElse(null)
+        }
 
         override fun isDown(): Boolean {
             if (input is EmptyInput) return false

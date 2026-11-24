@@ -5,13 +5,17 @@ package org.polyfrost.compose.minecraft.compat.controlify
 import androidx.compose.ui.InternalComposeUiApi
 import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusManager
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.platform.PlatformContext
 import androidx.compose.ui.scene.ComposeSceneFocusManager
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsNode
 import androidx.compose.ui.semantics.SemanticsOwner
 import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.semantics.SemanticsPropertyKey
 import androidx.compose.ui.semantics.SemanticsConfiguration
 import androidx.compose.ui.semantics.getAllSemanticsNodes
 import androidx.compose.ui.semantics.getOrNull
@@ -19,6 +23,8 @@ import androidx.compose.ui.text.TextRange
 import java.lang.reflect.Field
 import org.polyfrost.compose.host.controller.ControllerArrowsKey
 import org.polyfrost.compose.host.controller.ControllerAxes
+import org.polyfrost.compose.host.controller.ControllerPanKey
+import org.polyfrost.compose.host.controller.FocusEntryKey
 import org.polyfrost.compose.host.controller.HidesFocusRingKey
 import org.polyfrost.compose.host.controller.ShownGroupKey
 
@@ -69,6 +75,22 @@ internal class SceneSemantics {
 
     fun isAlive(owner: SemanticsOwner): Boolean = owner in owners
 
+    fun activeLayers(): List<LayoutCoordinates>? {
+        val layers = owners.toList()
+        val active = activeOwner() ?: layers.lastOrNull() ?: return null
+        val from = layers.indexOf(active)
+        if (from < 0) return null
+        return layers.subList(from, layers.size).map { it.unmergedRootSemanticsNode.layoutInfo.coordinates }
+    }
+
+    fun focusedNode(): FocusedNode? {
+        val owner = activeOwner() ?: return null
+        val node = owner.getAllSemanticsNodes(mergingEnabled = false).firstOrNull {
+            it.config.getOrElse(SemanticsProperties.Focused) { false } && it.boundsInWindow.width > 0f && it.boundsInWindow.height > 0f
+        } ?: return null
+        return FocusedNode(owner, node.id)
+    }
+
     private fun activeOwner(): SemanticsOwner? = owners.toList().asReversed().firstOrNull { owner ->
         owner.getAllSemanticsNodes(mergingEnabled = false).any { it.config.getOrElse(SemanticsProperties.Focused) { false } }
     }
@@ -79,7 +101,8 @@ internal class SceneSemantics {
                 if (!node.config.getOrElse(SemanticsProperties.Focused) { false }) continue
                 val bounds = node.boundsInWindow
                 if (bounds.width <= 0f || bounds.height <= 0f) continue
-                return SpatialNavigation.move(owner, bounds, node, direction, scroll)
+                val claimed = focusedArrows()?.covers(direction) == true
+                return SpatialNavigation.move(owner, bounds, node, direction, scroll, enter = !claimed)
             }
         }
         return SpatialNavigation.NONE
@@ -110,11 +133,23 @@ internal class SceneSemantics {
                 .filter { val b = it.boundsInWindow; b.width > 0f && b.height > 0f }
                 .sortedWith(compareBy({ it.boundsInWindow.top }, { it.boundsInWindow.left }))
             for (node in inside.take(MAX_FOCUS_ATTEMPTS)) {
+                if (entryWithin(group, node)?.let { runCatching { it.requestFocus() }.getOrDefault(false) } == true) return true
                 val action = node.config.getOrNull(SemanticsActions.RequestFocus)?.action ?: continue
                 if (action()) return true
             }
         }
         return false
+    }
+
+    private fun entryWithin(group: SemanticsNode, node: SemanticsNode): FocusRequester? {
+        if (node.id == group.id) return null
+        var parent = node.parent
+        while (parent != null) {
+            parent.config.getOrNull(FocusEntryKey)?.let { return it }
+            if (parent.id == group.id) return null
+            parent = parent.parent
+        }
+        return null
     }
 
     private fun isInside(group: SemanticsNode, node: SemanticsNode): Boolean {
@@ -176,12 +211,25 @@ internal class SceneSemantics {
         return false
     }
 
-    fun focusedArrows(): ControllerAxes? {
-        for (owner in listOfNotNull(activeOwner())) {
+    fun focusedArrows(): ControllerAxes? = focusedClaim(ControllerArrowsKey, merged = true)
+
+    fun focusedPan(): ((Offset) -> Unit)? = focusedClaim(ControllerPanKey, merged = false)
+
+    private fun <T> focusedClaim(key: SemanticsPropertyKey<T>, merged: Boolean): T? {
+        val owner = activeOwner() ?: return null
+        if (merged) {
             for (node in owner.getAllSemanticsNodes(mergingEnabled = true)) {
                 val config = node.config
                 if (!config.getOrElse(SemanticsProperties.Focused) { false }) continue
-                config.getOrNull(ControllerArrowsKey)?.let { return it }
+                config.getOrNull(key)?.let { return it }
+            }
+        }
+        for (node in owner.getAllSemanticsNodes(mergingEnabled = false)) {
+            if (!node.config.getOrElse(SemanticsProperties.Focused) { false }) continue
+            var current: SemanticsNode? = node
+            while (current != null) {
+                current.config.getOrNull(key)?.let { return it }
+                current = current.parent
             }
         }
         return null
@@ -230,6 +278,8 @@ private const val MAX_FOCUS_ATTEMPTS = 8
 private const val SAME_SPOT = 0.6f
 
 internal class FocusMark(val owner: SemanticsOwner, val bounds: Rect)
+
+internal data class FocusedNode(val owner: SemanticsOwner, val id: Int)
 
 internal data class FieldPreview(
     val text: String,

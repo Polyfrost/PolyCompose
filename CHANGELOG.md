@@ -2,7 +2,7 @@
 
 ## [Unreleased]
 
-- The d-pad and left stick move focus to the closest element in that direction, keep to the current row or column, and scroll lists to reach elements that are off screen. Focus stays inside an open popup or panel
+- The d-pad and left stick move focus to the closest element in that direction, keep to the current row or column, and scroll lists to reach elements that are off screen. From a focused pane they move into its links and buttons. Focus stays inside an open popup or panel, and controller actions on the screen behind an open dialog don't fire
 - When the d-pad or left stick can't move focus any further, the focused element gets an arrow key instead, so menus that move their own highlight work with a controller
 - Added `Modifier.focusEntry`, which makes focus land on the selected item when it moves into a row of choices such as tabs
 - Focus comes back to where you were after a menu, dialog or panel closes, or when the focused element disappears, instead of starting over from the top
@@ -11,8 +11,11 @@
 - A sends Enter to the focused element before the screen's own key handling, so screens that react to Enter no longer take presses away from the focused button
 - X opens the focused element's context menu when it supports the Menu key
 - Added `Modifier.controllerPan`, which hands the right stick to a focused element instead of scrolling, for things like 3D previews and zoomed images
-- Added `Modifier.controllerAction` for running code when X, Y, a bumper, a trigger, a stick click, Back or Start is pressed on a focused element. Its label shows in Controlify's button guide
+- Added `Modifier.controllerAction` for running code when X, Y, a bumper, a trigger, a stick click, Back or Start is pressed on a focused element. Its label shows in Controlify's button guide. Back has no default button, because View toggles Controlify's cursor
 - Added `Controllers` to `polycompose-core`, so mods that only depend on the core can register controller actions, check `Controllers.isActive`, read the sticks and stop the right stick from turning the camera while an overlay is open
+- `Controllers.register` takes a `ControllerContext`, so an action can work in game, in screens or both. Actions default to in game only
+- Added `Controllers.captureGameplay()` for overlays such as radial wheels. While it's held, Controlify stops moving the player and sending gameplay buttons, but your own actions and the sticks keep working
+- In Controlify's mixed input mode, `Controllers.isActive` follows whichever device the player used last
 - Added `InputKind` and `ComposeOptions.onInputKind(owner, kind)`, which now reports controller navigation too, and `KeyEvent.isFromController`
 - `org.polyfrost.compose.minecraft.compat.controlify.ControllerActions`, `ControllerAction` and `ControllerButton` are deprecated in favour of the new classes in `org.polyfrost.compose.host.controller`
 

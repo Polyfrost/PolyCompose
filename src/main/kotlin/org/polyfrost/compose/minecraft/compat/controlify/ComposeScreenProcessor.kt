@@ -4,6 +4,7 @@ package org.polyfrost.compose.minecraft.compat.controlify
 import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.geometry.Offset
 import com.mojang.blaze3d.platform.InputConstants
+import dev.isxander.controlify.Controlify
 import dev.isxander.controlify.api.bind.InputBindingSupplier
 import dev.isxander.controlify.bindings.ControlifyBindings
 import dev.isxander.controlify.controller.ControllerEntity
@@ -20,6 +21,7 @@ import net.minecraft.network.chat.MutableComponent
 import net.minecraft.resources.Identifier
 import org.polyfrost.compose.host.controller.ControllerButton
 import org.polyfrost.compose.host.controller.ControllerGuide
+import org.polyfrost.compose.host.controller.Controllers
 import org.polyfrost.compose.minecraft.screen.ComposeScreen
 
 //? if >= 26.3 {
@@ -43,7 +45,7 @@ internal class ComposeScreenProcessor(screen: ComposeScreen) : ScreenProcessor<C
 
     override fun handleComponentNavigation(controller: ControllerEntity) {
         screen.controllerRetryPending()
-        screen.controllerKeepFocus()
+        screen.controllerKeepFocus(restore = Controllers.isActive)
         val input = controller.input().orElse(null) ?: return
         val now = input.stateNow()
         val then = input.stateThen()
@@ -53,7 +55,10 @@ internal class ComposeScreenProcessor(screen: ComposeScreen) : ScreenProcessor<C
             if (binding?.digitalNow() != true && !now.isButtonDown(direction.dpad)) continue
             val wasDown = binding?.digitalPrev() == true || then.isButtonDown(direction.dpad)
             if (wasDown && !canRepeat) return
-            if (!wasDown) holdRepeatHelper.reset()
+            if (!wasDown) {
+                holdRepeatHelper.reset()
+                MixedInput.usedController()
+            }
             if (screen.controllerNavigate(direction.focus, direction.arrow)) {
                 holdRepeatHelper.onNavigate()
                 input.notifyGuiPressOutputsOfNavigate()
@@ -86,6 +91,7 @@ internal class ComposeScreenProcessor(screen: ComposeScreen) : ScreenProcessor<C
     }
 
     override fun handleTabNavigation(controller: ControllerEntity) {
+        if (Controlify.instance().virtualMouseHandler().isVirtualMouseEnabled) return
         val state = controller.input().orElse(null)
         for (button in ComposeGuiBindings.TAB_BUTTONS) {
             val pressed = ComposeGuiBindings.justPressed(controller, button) ||
@@ -111,7 +117,7 @@ internal class ComposeScreenProcessor(screen: ComposeScreen) : ScreenProcessor<C
         hints += hint(ControlifyBindings.GUI_PRESS.inputGlyph(), SELECT)
         hints += hint(ControlifyBindings.GUI_BACK.inputGlyph(), BACK)
         for (hint in screen.controllerHints()) {
-            val glyph = ComposeGuiBindings.glyph(hint.button) ?: continue
+            val glyph = ComposeGuiBindings.glyph(controller, hint.button) ?: continue
             hints += hint(glyph, Component.literal(hint.label))
         }
         hints += hint(ControlifyBindings.GUI_SECONDARY_NAVI_DOWN.inputGlyph(), SCROLL)

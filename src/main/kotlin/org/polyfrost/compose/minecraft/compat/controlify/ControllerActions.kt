@@ -2,6 +2,7 @@
 
 package org.polyfrost.compose.minecraft.compat.controlify
 
+import org.polyfrost.compose.host.controller.ControllerContext
 import org.polyfrost.compose.host.controller.Controllers
 import org.polyfrost.compose.host.controller.ControllerAction as CoreControllerAction
 
@@ -18,7 +19,10 @@ object ControllerActions {
         name: String,
         defaultButton: ControllerButton = ControllerButton.NONE,
         category: String = id.substringBefore(':'),
-    ): ControllerAction = ControllerAction(Controllers.register(id, name, defaultButton.toCore(), category), defaultButton)
+    ): ControllerAction = ControllerAction(
+        Controllers.register(id, name, defaultButton.toCore(), category, context = ControllerContext.Anywhere),
+        defaultButton,
+    )
 }
 
 @Deprecated("Use org.polyfrost.compose.host.controller.ControllerAction")
