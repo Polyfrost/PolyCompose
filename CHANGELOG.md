@@ -1,5 +1,13 @@
 # Changelog
 
+## [3.0.8]
+
+- Minecraft-font text on 1.8.9 now uses the text renderer's font sheet, widths and unicode mode instead of a bundled copy of the vanilla font, so resource packs with OptiFine or MCPatcher fonts (loaded by Cera) and unicode languages show the right font
+- Minecraft-font text on 1.8.9 uses Argentum's exact character widths when Argentum is installed
+- Fixed bold unicode characters being too narrow, and the bold and shadow offsets of unicode characters not matching the game
+- Fixed large images drawn with linear filtering inside a rounded clip not showing up
+- Added `McGlyph.boldAdvance` and `McGlyph.shadow`, set separately from `offset`
+
 ## [3.0.7]
 
 - Added `McHeadStyle` and `McPlayerFaces.drawHead` for drawing player heads as only the face, flat, or in 3D with the hat at 9/8 the size of the face like the player model. `McPlayerFace` and `NodeMcPlayerFace` take a style too
