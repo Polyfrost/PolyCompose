@@ -108,12 +108,11 @@ object McPlayerFaces {
         @Volatile var fetched: McSkinLayers? = null
         @Volatile var settled = false
         @Volatile var fetching = false
-        @Volatile var generation = 0
         var attempts = 0
         var clientKey: String? = null
         var clientTexture: Any? = null
         var client: McSkinLayers? = null
-        var custom: McSkinLayers? = null
+        var observed: McSkinLayers? = null
         var clientCheckedAt = 0L
         @Volatile var lastUsed = 0L
     }
@@ -243,6 +242,7 @@ object McPlayerFaces {
                 entry.clientKey = null
                 entry.clientTexture = null
                 entry.clientCheckedAt = 0L
+                if (entry.observed?.texture == defaultKey(entry.id)) entry.observed = null
             }
         }
         bump()
@@ -287,28 +287,17 @@ object McPlayerFaces {
         if (key != null && key == entry.clientKey && owner === entry.clientTexture) return
         val read = when {
             location == null || download(location) != Download.DONE -> null
-            key == defaultKey(entry.id) -> (replacedDefault(location)?.let { buildLayers(key, it, opaqueFace = true) } ?: defaultLayers(entry.id))
-                .also { forgetCustom(entry) }
+            key == defaultKey(entry.id) -> replacedDefault(location)?.let { buildLayers(key, it, opaqueFace = true) } ?: defaultLayers(entry.id)
             else -> runCatching { readTexture(location) ?: McResources.image(location.namespace, location.path) }.getOrNull()
                 ?.let { buildLayers(key!!, it, opaqueFace = true) }
-                ?.also { entry.custom = it }
         }
+        if (read != null) entry.observed = read
         entry.clientKey = if (read != null) key else null
         entry.clientTexture = if (read != null) owner else null
-        val layers = read ?: entry.custom
+        val layers = read ?: entry.observed
         if (layers === entry.client) return
         entry.client = layers
         bump()
-    }
-
-    private fun forgetCustom(entry: Entry) {
-        entry.custom = null
-        synchronized(entry) {
-            entry.generation++
-            entry.fetched = null
-            entry.settled = false
-            entry.attempts = 0
-        }
     }
 
     private fun ensureFetch(entry: Entry) {
@@ -341,17 +330,13 @@ object McPlayerFaces {
     }
 
     private fun fetch(entry: Entry) {
-        val generation = entry.generation
         val outcome = runCatching { download(entry.id) }
         val layers = outcome.getOrNull()
         if (outcome.isSuccess) {
             RenderThread.schedule {
-                synchronized(entry) {
-                    entry.fetching = false
-                    if (entry.generation != generation) return@schedule
-                    entry.fetched = layers
-                    entry.settled = true
-                }
+                entry.fetched = layers
+                entry.settled = true
+                entry.fetching = false
                 if (layers != null) bump()
             }
             return
@@ -445,11 +430,20 @@ object McPlayerFaces {
     private fun download(location: Identifier): Download {
         //? if = 1.8.9 {
         /*val texture = Minecraft.getInstance().textureManager.getTexture(location) as? HttpTexture ?: return Download.DONE
-        texture.getGlId()
         val access = texture as HttpTextureAccessor
-        if (access.`polycompose$isUploaded`()) return Download.DONE
+        fun uploaded(): Boolean {
+            val previous = GL11.glGetInteger(GL11.GL_TEXTURE_BINDING_2D)
+            try {
+                texture.getGlId()
+            } finally {
+                bindTexture(previous)
+            }
+            return access.`polycompose$isUploaded`()
+        }
+        if (uploaded()) return Download.DONE
         val downloader = access.`polycompose$getDownloader`()
-        return if (downloader == null || downloader.isAlive) Download.PENDING else Download.FAILED
+        if (downloader == null || downloader.isAlive) return Download.PENDING
+        return if (uploaded()) Download.DONE else Download.FAILED
         *///?} else
         return Download.DONE
     }
