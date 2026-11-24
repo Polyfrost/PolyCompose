@@ -6,6 +6,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
+import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
@@ -19,7 +20,7 @@ public val FocusEntryKey: SemanticsPropertyKey<FocusRequester> = SemanticsProper
 public fun Modifier.focusEntry(target: FocusRequester, enabled: Boolean = true): Modifier =
     then(if (enabled) Modifier.semantics { this[FocusEntryKey] = target } else Modifier).focusProperties {
         onEnter = {
-            if (enabled) runCatching { target.requestFocus() }
+            if (enabled) runCatching { target.requestFocus(FocusDirection.Down) }
         }
     }.focusGroup()
 
@@ -28,7 +29,7 @@ public fun Modifier.focusWhenShown(shown: Boolean, key: Any? = null): Modifier =
     LaunchedEffect(shown, key) {
         if (!shown || !Controllers.isActive) return@LaunchedEffect
         withFrameNanos { }
-        runCatching { requester.requestFocus() }
+        runCatching { requester.requestFocus(FocusDirection.Down) }
     }
     focusRequester(requester).focusGroup()
 }
