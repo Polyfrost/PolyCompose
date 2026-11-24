@@ -56,7 +56,6 @@ import org.polyfrost.compose.render.PolyGradient
 import org.polyfrost.compose.render.PolyPath
 import org.polyfrost.compose.render.PolyRenderer
 import org.polyfrost.compose.render.PolyShadow
-import org.polyfrost.compose.text.MinecraftFontFamily
 
 class ComposeBackendTest {
     private class LogRenderer : PolyRenderer {
@@ -75,7 +74,7 @@ class ComposeBackendTest {
         override fun fillPath(path: PolyPath, color: Int) = log("path #${Integer.toHexString(color)}")
         override fun text(text: String, x: Float, y: Float, color: Int, font: PolyFont) = log("text '$text' ${x + tx},${y + ty}")
         override fun textOutline(text: String, x: Float, y: Float, color: Int, font: PolyFont, width: Float) = log("textOutline")
-        override fun mcText(text: String, x: Float, y: Float, color: Int, shadow: Boolean, scale: Float) = log("mcText '$text' ${x + tx}")
+        override fun mcText(text: String, x: Float, y: Float, color: Int, shadow: Boolean, scale: Float) = log("mcText")
         override fun mcTextOutline(text: String, x: Float, y: Float, color: Int, outlineColor: Int, scale: Float) = log("mcTextOutline")
         override fun image(bitmap: PolyBitmap, x: Float, y: Float, w: Float, h: Float, u0: Float, v0: Float, u1: Float, v1: Float, tint: Int, filterQuality: FilterQuality) = log("image")
         override fun live(draw: (PolyRenderer) -> Unit) = draw(this)
@@ -228,23 +227,6 @@ class ComposeBackendTest {
         assertEquals(3, p.getOffsetForPosition(Offset(22f, 5f)))
         assertEquals(ResolvedTextDirection.Ltr, p.getParagraphDirection(0))
         assertEquals(ResolvedTextDirection.Ltr, p.getBidiRunDirection(0))
-    }
-
-    @Test
-    fun minecraftRtlParagraphMirrorsNeutralRuns() {
-        val p = paragraph("(abc)", TextStyle(fontFamily = MinecraftFontFamily, textDirection = TextDirection.Rtl))
-        val r = LogRenderer()
-        p.paint(PolyCanvas(r), Color.Black, null, null)
-        val drawn = r.calls.filter { it.startsWith("mcText") }.sortedBy { it.substringAfterLast(' ').toFloat() }.map { it.substringAfter('\'').substringBefore('\'') }
-        assertEquals(listOf("(", "abc", ")"), drawn)
-    }
-
-    @Test
-    fun minecraftRtlRunWithLiteralSectionSignIsReversedBeforeDrawing() {
-        val p = paragraph("אב§ג", TextStyle(fontFamily = MinecraftFontFamily))
-        val r = LogRenderer()
-        p.paint(PolyCanvas(r), Color.Black, null, null)
-        assertEquals(listOf("גבא"), r.calls.filter { it.startsWith("mcText") }.map { it.substringAfter('\'').substringBefore('\'') })
     }
 
     @Test

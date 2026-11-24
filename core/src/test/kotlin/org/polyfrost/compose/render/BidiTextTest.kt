@@ -3,7 +3,6 @@ package org.polyfrost.compose.render
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertSame
 import org.junit.jupiter.api.Test
-import org.polyfrost.compose.mc.McFontQueue
 
 class BidiTextTest {
     @Test
@@ -21,21 +20,5 @@ class BidiTextTest {
         assertEquals("\u05D1\u05D0\u05B8", visualOrder("\u05D0\u05B8\u05D1"))
         assertEquals("\uFE96\uFEF4\uFE91", visualOrder("بيت"))
         assertEquals("\uFEFB", visualOrder("لا"))
-    }
-
-    @Test
-    fun leadingFormattingCodesKeepBidi() {
-        assertEquals("§l§oםולש", mcVisualOrder("§l§oשלום", false))
-        assertEquals("§lשלום §rhi", mcVisualOrder("§lשלום §rhi", false))
-    }
-
-    @Test
-    fun literalSectionSignTextIsLeftAsIs() {
-        assertEquals("ג§בא", mcVisualOrder("ג§בא", true))
-    }
-
-    @Test
-    fun bundledWidthMeasuresShapedText() {
-        assertEquals(McFontQueue.measureTextWidth("\uFEFB", 1f), McFontQueue.measureTextWidth("لا", 1f))
     }
 }

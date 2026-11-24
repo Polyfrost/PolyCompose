@@ -46,12 +46,12 @@ public class RenderContext(public val renderer: PolyRenderer) {
 
     public fun text(text: String, x: Float, y: Float, color: PolyColor, font: PolyFont) {
         if (color.alpha == 0 || text.isEmpty()) return
-        renderer.text(visualOrder(text), x, y, color.argb, font)
+        renderer.text(text, x, y, color.argb, font)
     }
 
     public fun textOutline(text: String, x: Float, y: Float, color: PolyColor, font: PolyFont, width: Float) {
         if (color.alpha == 0 || text.isEmpty() || width <= 0f) return
-        renderer.textOutline(visualOrder(text), x, y, color.argb, font, width)
+        renderer.textOutline(text, x, y, color.argb, font, width)
     }
 
     public fun mcText(text: String, x: Float, y: Float, color: Int, shadow: Boolean, scale: Float) {
@@ -104,7 +104,7 @@ public class RenderContext(public val renderer: PolyRenderer) {
         renderer.mcTextOutline(text, x, y, color, outlineColor, scale, literal)
     }
 
-    public fun measureText(text: String, font: PolyFont): Float = font.measureTextWidth(visualOrder(text))
+    public fun measureText(text: String, font: PolyFont): Float = font.measureTextWidth(text)
 
     public fun live(draw: RenderContext.() -> Unit): Unit = renderer.live { runLive(it, draw) }
 

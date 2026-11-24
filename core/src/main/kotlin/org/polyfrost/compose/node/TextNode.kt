@@ -4,7 +4,6 @@ import org.polyfrost.compose.render.FontManager
 import org.polyfrost.compose.render.PolyColor
 import org.polyfrost.compose.render.PolyFont
 import org.polyfrost.compose.render.RenderContext
-import org.polyfrost.compose.render.visualOrder
 
 public class TextNode : PolyNode() {
     public var text: String = ""
@@ -59,7 +58,7 @@ public class TextNode : PolyNode() {
         measureDirty = false
         measuredFonts = FontManager.revision
         val font = font()
-        intrinsicWidth = font.measureTextWidth(visualOrder(text))
+        intrinsicWidth = font.measureTextWidth(text)
         intrinsicHeight = font.metrics.let { it.descent - it.ascent }
     }
 
@@ -72,7 +71,7 @@ public class TextNode : PolyNode() {
         val sc = shadowColor
         val sh = shadow
         if (c.chroma || sh && sc.chroma) {
-            val t = visualOrder(text)
+            val t = text
             val off = shadowOffset
             ctx.renderer.live { r ->
                 if (sh && sc.alpha != 0 && t.isNotEmpty()) r.text(t, px + off, baseline + off, sc.argb, font)

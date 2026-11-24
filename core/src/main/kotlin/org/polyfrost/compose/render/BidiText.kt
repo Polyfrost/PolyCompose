@@ -19,14 +19,6 @@ public fun visualOrder(text: String): String {
     return out.append(visualLine(text.substring(start))).toString()
 }
 
-internal fun mcVisualOrder(text: String, literal: Boolean): String {
-    if (literal) return if ('§' in text) text else visualOrder(text)
-    var p = 0
-    while (p + 1 < text.length && text[p] == '§') p += 2
-    if (text.indexOf('§', p) >= 0) return text
-    return if (p == 0) visualOrder(text) else text.substring(0, p) + visualOrder(text.substring(p))
-}
-
 private fun visualLine(line: String): String {
     if (!Bidi.requiresBidi(line.toCharArray(), 0, line.length)) return line
     val bidi = Bidi(line, Bidi.DIRECTION_DEFAULT_LEFT_TO_RIGHT)

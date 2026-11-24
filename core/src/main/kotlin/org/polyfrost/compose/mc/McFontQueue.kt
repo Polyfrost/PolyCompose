@@ -1,7 +1,6 @@
 package org.polyfrost.compose.mc
 
 import org.polyfrost.compose.render.PolyGlyphPage
-import org.polyfrost.compose.render.mcVisualOrder
 
 public object McFontQueue {
     public var measureWidth: ((text: String, scale: Float) -> Float)? = null
@@ -32,7 +31,6 @@ public object McFontQueue {
     @Volatile private var advancesFor: PolyGlyphPage.Rasterizer? = null
 
     private fun bundledWidth(text: String, scale: Float, literal: Boolean): Float {
-        val text = mcVisualOrder(text, literal)
         val r = PolyGlyphPage.rasterizer ?: return text.length * 6f * scale
         if ('§' !in text) plainWidth(r, text, scale)?.let { return it }
         var w = 0f

@@ -72,7 +72,6 @@ import org.polyfrost.compose.render.ChromaBrush
 import org.polyfrost.compose.render.PolyRenderer
 import org.polyfrost.compose.render.PolyTessellator
 import org.polyfrost.compose.render.placeBlur
-import org.polyfrost.compose.render.visualOrder
 import org.polyfrost.compose.text.McFonts
 import java.text.Bidi
 import java.text.BreakIterator
@@ -874,7 +873,6 @@ internal class PolyParagraph(private val intr: PolyIntrinsics, maxLines: Int, ov
                 if (a >= e) continue
                 val glyphs = intr.glyphs.substring(a, e)
                 segs += if (level and 1 == 0) Seg(glyphs, x + intr.width(rs, a), intr.width(a, e), run)
-                else if (McFonts.isMinecraft(run.font.name) && '§' !in glyphs && Bidi.requiresBidi(glyphs.toCharArray(), 0, glyphs.length)) Seg(glyphs.replace(LIGATURE_PLACEHOLDER.toString(), ""), x + intr.width(e, re), intr.width(a, e), run)
                 else Seg(reversedClusters(glyphs), x + intr.width(e, re), intr.width(a, e), run)
             }
             x += intr.width(rs, re)
@@ -1655,12 +1653,11 @@ internal class PolyParagraph(private val intr: PolyIntrinsics, maxLines: Int, ov
             else r.mcText(str, x, top, color, shadow, scale, true, false)
             return
         }
-        val vis = visualOrder(str)
         var cx = x
         var i = 0
-        while (i < vis.length) {
-            val n = Character.charCount(vis.codePointAt(i))
-            val ch = vis.substring(i, i + n)
+        while (i < str.length) {
+            val n = Character.charCount(str.codePointAt(i))
+            val ch = str.substring(i, i + n)
             if (formatted) r.mcText(prefix + ch, cx, top, color, shadow, scale, false, false)
             else r.mcText(ch, cx, top, color, shadow, scale, true, false)
             cx += run.font.measureTextWidth(ch) + letter

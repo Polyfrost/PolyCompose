@@ -1294,7 +1294,6 @@ public abstract class PolyTessellator : PolyRenderer {
 
     override fun mcText(text: String, x: Float, y: Float, color: Int, shadow: Boolean, scale: Float, literal: Boolean) {
         if (cpuOnly) return
-        val text = mcVisualOrder(text, literal)
         val x = if (snapMcX) mcLineLeft(x) else x
         if (shadow) {
             beginDraw()
@@ -1368,14 +1367,13 @@ public abstract class PolyTessellator : PolyRenderer {
         beginDraw()
         if (cpuOnly) return
         val x = if (snapMcX) mcLineLeft(x) else x
-        mcOutlineQuads(mcVisualOrder(text, literal), x, y, mulAlpha(outlineColor, state.alpha), scale, literal)
+        mcOutlineQuads(text, x, y, mulAlpha(outlineColor, state.alpha), scale, literal)
         mcText(text, x, y, color, false, scale, literal, false)
     }
 
     internal fun mcTextStroke(text: String, x: Float, y: Float, color: Int, scale: Float, literal: Boolean, snapX: Boolean) {
         if (!layered || !blendSupported(PolyRenderer.BLEND_DST_OUT) || !McGlyphs.available()) return mcText(text, x, y, color, false, scale, literal, snapX)
         if (cpuOnly) return
-        val text = mcVisualOrder(text, literal)
         withMcX(snapX) {
             val left = if (snapMcX) mcLineLeft(x) else x
             val outer = wantBlend
