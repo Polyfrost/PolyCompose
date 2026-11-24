@@ -67,25 +67,28 @@ class GlRenderer private constructor(private val inLive: Boolean) : PolyTessella
         class Memo {
             var key = 0
             var out: List<GlProgram.Batch>? = null
+            var obfuscated = false
         }
 
         fun moved(at: Int) = Live(at, state, blend, draw, key, box, memo)
 
         val stamp: Int get() = memo.key
 
+        private fun value(k: IntSupplier): Int = if (memo.obfuscated) k.asInt * 31 + OBFUSCATION_FRAME.asInt else k.asInt
+
         fun changed(since: Int): Boolean {
             val k = key ?: return true
-            return memo.out == null || k.asInt != since
+            return memo.out == null || value(k) != since
         }
 
         fun dirty(): Boolean {
             val k = key ?: return true
-            return memo.out == null || k.asInt != memo.key
+            return memo.out == null || value(k) != memo.key
         }
 
         fun cached(): List<GlProgram.Batch>? {
             val k = key ?: return null
-            val value = k.asInt
+            val value = value(k)
             val out = memo.out
             if (out != null && value == memo.key) {
                 var alive = true
@@ -100,8 +103,12 @@ class GlRenderer private constructor(private val inLive: Boolean) : PolyTessella
             return null
         }
 
-        fun keep(out: List<GlProgram.Batch>) {
-            if (key != null) memo.out = out
+        fun keep(out: List<GlProgram.Batch>, obfuscated: Boolean) {
+            val k = key ?: return
+            memo.out = out
+            if (obfuscated == memo.obfuscated) return
+            memo.obfuscated = obfuscated
+            memo.key = value(k)
         }
 
         fun samplesAtlas(): Boolean {
@@ -349,19 +356,52 @@ class GlRenderer private constructor(private val inLive: Boolean) : PolyTessella
         if (inLive) return draw(this)
         flush()
         beginDraw()
+        val box = floatArrayOf(Float.MAX_VALUE, Float.MAX_VALUE, -Float.MAX_VALUE, -Float.MAX_VALUE)
+        extend(box, x, y, w, h)
+        touch(box[0], box[1], box[2], box[3])
+        lives.add(Live(batches.size, state.copy(), blendMode, draw, key, box))
+    }
+
+    private fun extend(box: FloatArray, x: Float, y: Float, w: Float, h: Float) {
         val s = state
         val x0 = x * s.sx + s.tx
         val x1 = (x + w) * s.sx + s.tx
         val y0 = y * s.sy + s.ty
         val y1 = (y + h) * s.sy + s.ty
         val m = s.rot
-        val box = floatArrayOf(Float.MAX_VALUE, Float.MAX_VALUE, -Float.MAX_VALUE, -Float.MAX_VALUE)
         extend(box, m, x0, y0)
         extend(box, m, x1, y0)
         extend(box, m, x1, y1)
         extend(box, m, x0, y1)
+    }
+
+    // samples one draw for ink beyond the layout box, and keeps its draw boxes so a fading layer sees the shadow overlap the fill
+    override fun mcTextAnimated(x: Float, y: Float, w: Float, h: Float, draw: (PolyTessellator) -> Unit) {
+        obfuscated = true
+        val measured = measuring
+        if (measured != null) extend(measured, x, y, w, h)
+        if (inLive || measured != null) return draw(this)
+        flush()
+        val start = batches.size
+        draw(this)
+        flush()
+        val box = floatArrayOf(Float.MAX_VALUE, Float.MAX_VALUE, -Float.MAX_VALUE, -Float.MAX_VALUE)
+        extendByVerts(box, start)
+        batches.subList(start, batches.size).clear()
+        extend(box, x, y, w, h)
+        beginDraw()
         touch(box[0], box[1], box[2], box[3])
-        lives.add(Live(batches.size, s.copy(), blendMode, draw, key, box))
+        lives.add(Live(batches.size, state.copy(), blendMode, { draw(it as PolyTessellator) }, OBFUSCATION_FRAME, box))
+    }
+
+    private fun extendByVerts(box: FloatArray, start: Int) {
+        for (k in start until batches.size) {
+            val b = batches[k]
+            for (i in b.colors.indices) {
+                val vx = b.verts[i * 4]; val vy = b.verts[i * 4 + 1]
+                box[0] = min(box[0], vx); box[1] = min(box[1], vy); box[2] = max(box[2], vx); box[3] = max(box[3], vy)
+            }
+        }
     }
 
     override fun mcTextLive(text: String, x: Float, y: Float, color: () -> Int, shadow: Boolean, scale: Float, literal: Boolean) {
@@ -374,19 +414,21 @@ class GlRenderer private constructor(private val inLive: Boolean) : PolyTessella
         measuredLive(text, x, y, shadow, scale, true, color) { it.mcText(text, x, y, color.asInt, shadow, scale, true) }
     }
 
+    private var measuring: FloatArray? = null
+    private var obfuscated = false
+
     private fun measuredLive(text: String, x: Float, y: Float, shadow: Boolean, scale: Float, literal: Boolean, key: IntSupplier, draw: (PolyRenderer) -> Unit) {
         flush()
         val start = batches.size
-        mcText(text, x, y, -1, shadow, scale, literal)
-        flush()
         val box = floatArrayOf(Float.MAX_VALUE, Float.MAX_VALUE, -Float.MAX_VALUE, -Float.MAX_VALUE)
-        for (k in start until batches.size) {
-            val b = batches[k]
-            for (i in b.colors.indices) {
-                val vx = b.verts[i * 4]; val vy = b.verts[i * 4 + 1]
-                box[0] = min(box[0], vx); box[1] = min(box[1], vy); box[2] = max(box[2], vx); box[3] = max(box[3], vy)
-            }
+        measuring = box
+        try {
+            mcText(text, x, y, -1, shadow, scale, literal)
+        } finally {
+            measuring = null
         }
+        flush()
+        extendByVerts(box, start)
         batches.subList(start, batches.size).clear()
         if (box[0] > box[2]) return live(draw)
         beginDraw()
@@ -575,13 +617,14 @@ class GlRenderer private constructor(private val inLive: Boolean) : PolyTessella
             state = l.state.copy()
             blend(l.blend)
             transient = l.key == null
+            obfuscated = false
             try {
                 l.draw(this)
                 flush()
             } finally {
                 transient = false
             }
-            out.add(l.at + offset, if (l.key != null) ArrayList(batches).also(l::keep) else out.copy(batches))
+            out.add(l.at + offset, if (l.key != null) ArrayList(batches).also { l.keep(it, obfuscated) } else out.copy(batches))
         }
     }
 
@@ -1070,6 +1113,8 @@ class GlRenderer private constructor(private val inLive: Boolean) : PolyTessella
     private companion object {
         private const val COALESCE_FRAMES = 60
         private var liveRenderer: GlRenderer? = null
+
+        private val OBFUSCATION_FRAME = IntSupplier { (System.nanoTime() / 50_000_000L).toInt() }
 
         fun replayer(): GlRenderer = liveRenderer?.takeIf { it.matches() } ?: GlRenderer(true).also { liveRenderer = it }
 

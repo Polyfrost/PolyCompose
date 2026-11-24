@@ -4,6 +4,7 @@ package org.polyfrost.compose.minecraft.compat
 /*import dev.rdh.argentum.api.render.text.GlyphInfo
 import dev.rdh.argentum.api.render.text.TextGlyphs
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.ThreadLocalRandom
 import net.minecraft.client.render.TextRenderer
 import org.polyfrost.compose.host.HostErrors
 import org.polyfrost.compose.mc.McGlyph
@@ -37,6 +38,8 @@ object ArgentumGlyphs {
             val g = TextGlyphs.glyph(renderer, cp)?.let(::convert) ?: MISSING
             return (glyphs.putIfAbsent(cp, g) ?: g).takeIf { it !== MISSING }
         }
+
+        fun obfuscate(cp: Int): Int = if (RenderThread.isCurrent()) TextGlyphs.obfuscate(renderer, cp, ThreadLocalRandom.current()) else cp
     }
 
     private fun convert(info: GlyphInfo): McGlyph {

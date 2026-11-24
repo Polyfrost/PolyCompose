@@ -5,9 +5,11 @@ import java.io.ByteArrayInputStream
 import java.util.Locale
 import java.util.Optional
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.ThreadLocalRandom
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.zip.ZipInputStream
 import kotlin.jvm.optionals.getOrNull
+import kotlin.math.ceil
 import net.minecraft.client.Minecraft
 import net.minecraft.server.packs.resources.ResourceManager
 import org.polyfrost.compose.mc.McFontQueue
@@ -150,10 +152,23 @@ internal object McResourceFont {
         }
     }
 
-    private class Font(private val layers: List<Layer>) {
+    private class Font(private val layers: List<Layer>, private val obfuscatable: IntArray? = null, private val obfuscator: ((Int) -> Int)? = null) {
+        private val byWidth: Map<Int, IntArray> by lazy {
+            val codepoints = obfuscatable?.asList() ?: layers.flatMap { it.glyphs.keys }.filter { it != ' '.code }.distinct()
+            codepoints.groupBy { glyph(it)?.let { g -> ceil(g.advance).toInt() } ?: -1 }.filterKeys { it >= 0 }.mapValues { it.value.sorted().toIntArray() }
+        }
+
         fun glyph(cp: Int): McGlyph? {
             for (i in layers.indices) layers[i].glyph(cp)?.let { return it }
             return null
+        }
+
+        fun obfuscate(cp: Int): Int {
+            obfuscator?.let { return it(cp) }
+            val advance = glyph(cp)?.advance ?: return cp
+            val bucket = byWidth[ceil(advance).toInt()] ?: return cp
+            if (obfuscatable != null && bucket.binarySearch(cp) < 0) return cp
+            return bucket[ThreadLocalRandom.current().nextInt(bucket.size)]
         }
 
         fun close() {
@@ -168,6 +183,7 @@ internal object McResourceFont {
 
     fun init() {
         McGlyphs.source = { cp -> font?.glyph(cp) }
+        McGlyphs.obfuscate = { cp -> font?.obfuscate(cp) ?: cp }
         McFontQueue.measureWidth = McGlyphs::width
         McFontQueue.measureLiteralWidth = { text, scale -> McGlyphs.width(text, scale, true) }
         HostEvents.onResourcesReloaded(::reload)
@@ -177,6 +193,7 @@ internal object McResourceFont {
 
     fun initGlyphs() {
         McGlyphs.source = { cp -> font?.glyph(cp) ?: demand() }
+        McGlyphs.obfuscate = { cp -> font?.obfuscate(cp) ?: cp }
         HostEvents.onResourcesReloaded { if (wanted) reload() }
         HostEvents.onClientTick { if (wanted && requested != fontOptions()) reload() }
     }
@@ -270,14 +287,14 @@ internal object McResourceFont {
     }
 
     private fun loadRendererFont(rm: ResourceManager, renderer: RendererState): Font {
-        renderer.argentum?.let { return Font(listOf(Layer(emptyMap(), emptyMap(), lookup = it::glyph))) }
+        renderer.argentum?.let { return Font(listOf(Layer(emptyMap(), emptyMap(), lookup = it::glyph)), obfuscator = it::obfuscate) }
         val glyphs = HashMap<Int, McGlyph>()
         glyphs[' '.code] = McGlyph(null, 0f, 0f, 0f, 0f, 0f, 0f, 0f, renderer.advances[SHEET_CHARS.indexOf(' ')], 1f)
         if (!renderer.unicode) loadRendererSheet(rm, renderer, glyphs)
         val layers = arrayListOf(Layer(glyphs, emptyMap()))
         loadLegacyUnicode(rm, "minecraft:font/glyph_sizes.bin", "minecraft:font/unicode_page_%s.png", if (renderer.unicode) 0.5f else 1f, if (renderer.unicode) 0.5f else 0f)
             ?.let { layers += Layer(emptyMap(), emptyMap(), legacy = it) }
-        return Font(layers)
+        return Font(layers, SHEET_CHARS.codePoints().filter { it != 0 }.toArray())
     }
 
     private fun loadRendererSheet(rm: ResourceManager, renderer: RendererState, out: MutableMap<Int, McGlyph>) {

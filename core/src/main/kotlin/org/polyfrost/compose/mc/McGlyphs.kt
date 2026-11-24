@@ -51,6 +51,11 @@ public object McGlyphs {
     @Volatile
     public var source: ((codepoint: Int) -> McGlyph?)? = null
 
+    /** Picks a random stand-in of the same width for a codepoint in §k text; without it §k text is drawn as is. */
+    @JvmStatic
+    @Volatile
+    public var obfuscate: ((codepoint: Int) -> Int)? = null
+
     /** Width of [text], honoring § formatting codes, as the tessellator draws it. */
     @JvmStatic
     public fun width(text: String, scale: Float): Float = width(text, scale, false)
