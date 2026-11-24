@@ -113,6 +113,7 @@ object McPlayerFaces {
         var clientTexture: Any? = null
         var client: McSkinLayers? = null
         var observed: McSkinLayers? = null
+        var observedDefault = false
         var clientCheckedAt = 0L
         @Volatile var lastUsed = 0L
     }
@@ -242,7 +243,7 @@ object McPlayerFaces {
                 entry.clientKey = null
                 entry.clientTexture = null
                 entry.clientCheckedAt = 0L
-                if (entry.observed?.texture == defaultKey(entry.id)) entry.observed = null
+                if (entry.observedDefault) entry.observed = null
             }
         }
         bump()
@@ -291,10 +292,13 @@ object McPlayerFaces {
             else -> runCatching { readTexture(location) ?: McResources.image(location.namespace, location.path) }.getOrNull()
                 ?.let { buildLayers(key!!, it, opaqueFace = true) }
         }
-        if (read != null) entry.observed = read
+        if (read != null) {
+            entry.observed = read
+            entry.observedDefault = key == defaultKey(entry.id)
+        }
         entry.clientKey = if (read != null) key else null
         entry.clientTexture = if (read != null) owner else null
-        val layers = read ?: entry.observed
+        val layers = read ?: entry.observed ?: if (entry.observedDefault) defaultLayers(entry.id) else null
         if (layers === entry.client) return
         entry.client = layers
         bump()
