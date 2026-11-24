@@ -1,5 +1,9 @@
 # Changelog
 
+## [3.0.9]
+
+- Fixed enchanted item icons on 1.21.11 and newer being drawn by the game's item renderer instead of the icon atlas, which has PolyCompose's own glint
+
 ## [3.0.8]
 
 - Minecraft-font text on 1.8.9 now uses the text renderer's font sheet, widths and unicode mode instead of a bundled copy of the vanilla font, so resource packs with OptiFine or MCPatcher fonts (loaded by Cera) and unicode languages show the right font
