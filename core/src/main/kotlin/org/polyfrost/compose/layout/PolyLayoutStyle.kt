@@ -13,6 +13,16 @@ public class PolyLayoutStyle {
         set(value) { if (field != value) { beforeLayoutChange(); field = value } }
     public var height: PolySize = PolySize.Wrap
         set(value) { if (field != value) { beforeLayoutChange(); field = value } }
+    public var minWidth: Float = Float.NaN
+        set(value) { if (field != value) { beforeLayoutChange(); field = value } }
+    public var maxWidth: Float = Float.NaN
+        set(value) { if (field != value) { beforeLayoutChange(); field = value } }
+    public var minHeight: Float = Float.NaN
+        set(value) { if (field != value) { beforeLayoutChange(); field = value } }
+    public var maxHeight: Float = Float.NaN
+        set(value) { if (field != value) { beforeLayoutChange(); field = value } }
+    public var fitContent: Boolean = false
+        set(value) { if (field != value) { beforeLayoutChange(); field = value } }
     public var align: PolyAlign = PolyAlign.TopLeft
         set(value) { if (field != value) { beforeLayoutChange(); field = value } }
     public var padding: PolyInsets = PolyInsets()
@@ -40,6 +50,11 @@ public class PolyLayoutStyle {
 
     private var laidWidth: PolySize = PolySize.Wrap
     private var laidHeight: PolySize = PolySize.Wrap
+    private var laidMinWidth: Float = Float.NaN
+    private var laidMaxWidth: Float = Float.NaN
+    private var laidMinHeight: Float = Float.NaN
+    private var laidMaxHeight: Float = Float.NaN
+    private var laidFitContent: Boolean = false
     private var laidAlign: PolyAlign = PolyAlign.TopLeft
     private var laidPadding: PolyInsets = padding
     private var laidMargin: PolyInsets = margin
@@ -55,6 +70,11 @@ public class PolyLayoutStyle {
         pending = true
         laidWidth = width
         laidHeight = height
+        laidMinWidth = minWidth
+        laidMaxWidth = maxWidth
+        laidMinHeight = minHeight
+        laidMaxHeight = maxHeight
+        laidFitContent = fitContent
         laidAlign = align
         laidPadding = padding
         laidMargin = margin
@@ -67,7 +87,8 @@ public class PolyLayoutStyle {
     }
 
     internal fun layoutDiffers(): Boolean =
-        laidWidth != width || laidHeight != height || laidAlign != align || laidPadding != padding ||
+        laidWidth != width || laidHeight != height || laidMinWidth != minWidth || laidMaxWidth != maxWidth ||
+            laidMinHeight != minHeight || laidMaxHeight != maxHeight || laidFitContent != fitContent || laidAlign != align || laidPadding != padding ||
             laidMargin != margin || laidPositionMode != positionMode || laidX != x || laidY != y ||
             laidGap != gap || laidLayoutType != layoutType
 }
