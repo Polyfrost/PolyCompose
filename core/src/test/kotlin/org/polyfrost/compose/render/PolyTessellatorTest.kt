@@ -867,6 +867,30 @@ class PolyTessellatorTest {
     }
 
     @Test
+    fun offPixelMcGlyphsUseNearestAtNativeScale() {
+        val sheet = PolyBitmap(16, 16, ByteArray(16 * 16 * 4) { -1 })
+        val glyph = McGlyph(sheet, 1f / 16f, 1f / 16f, 5.5f / 16f, 9f / 16f, 0f, 4.5f, 8f, 5.5f, 1f)
+        val sliver = McGlyph(sheet, 1f / 16f, 1f / 16f, 1.25f / 16f, 9f / 16f, 0f, 0.25f, 8f, 1.25f, 1f)
+        val source = McGlyphs.source
+        try {
+            fun nearestAt(g: McGlyph, scale: Float): Boolean {
+                McGlyphs.source = { g }
+                return GlyphRecorder().run {
+                    scale(scale, scale)
+                    mcText("a", 0f, 0f, -1, false, 1f)
+                    done()
+                }.single()
+            }
+            assertTrue(nearestAt(glyph, 1f), "native scale")
+            assertTrue(nearestAt(glyph, 2f), "upscaled")
+            assertFalse(nearestAt(glyph, 0.99f), "downscaled")
+            assertTrue(nearestAt(sliver, 0.5f), "narrower than a pixel")
+        } finally {
+            McGlyphs.source = source
+        }
+    }
+
+    @Test
     fun nearestMcGlyphsStartOnWholePixelsAndKeepTheirScale() {
         val sheet = PolyBitmap(16, 16, ByteArray(16 * 16 * 4) { -1 })
         val glyph = McGlyph(sheet, 0f, 0f, 0.5f, 0.5f, 0f, 8f, 8f, 8f, 1f)

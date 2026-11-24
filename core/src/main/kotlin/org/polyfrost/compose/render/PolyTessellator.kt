@@ -1599,7 +1599,8 @@ public abstract class PolyTessellator : PolyRenderer {
         val c = mulAlpha(color, state.alpha)
         if (invisible(c)) return
         val s = state
-        val nearest = abs(g.width * scale * s.sx) >= g.pixelWidth && abs(g.height * scale * s.sy) >= g.pixelHeight
+        val nearest = g.pixelWidth <= 0 || g.pixelHeight <= 0 ||
+            abs(g.width * scale * s.sx) >= g.texelWidth - MC_TEXEL_EPSILON && abs(g.height * scale * s.sy) >= g.texelHeight - MC_TEXEL_EPSILON
         val b = if (nearest) sheet else g.linearBitmap ?: return
         val p = mcPlaced(b)
         begin(p?.page ?: bitmapTexture(b), !nearest, nearest)
@@ -4312,6 +4313,7 @@ public abstract class PolyTessellator : PolyRenderer {
         private const val TEXT_DESCENT_REACH = 2f
         private const val MC_LINE_REACH = 16f
         private const val MC_LINE_HEIGHT = 9f
+        private const val MC_TEXEL_EPSILON = 1e-3f
 
         private const val NEAREST_TIE_BIAS = 1f / 256f
         private const val STRICT_EDGE_EPSILON = 1e-5f
