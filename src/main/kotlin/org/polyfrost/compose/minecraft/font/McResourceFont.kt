@@ -26,7 +26,7 @@ import org.slf4j.LoggerFactory
 import net.minecraft.resources.Identifier
 //?} else {
 /*import net.ornithemc.osl.core.api.util.NamespacedIdentifiers
-import org.polyfrost.compose.minecraft.compat.ArgentumCompat
+import org.polyfrost.compose.minecraft.compat.ArgentumGlyphs
 *///?}
 
 internal object McResourceFont {
@@ -65,10 +65,12 @@ internal object McResourceFont {
         val unihex: Map<Int, Unihex>,
         val ttf: Ttf? = null,
         val legacy: LegacyUnicode? = null,
+        val lookup: ((Int) -> McGlyph?)? = null,
     ) {
         private val baked = ConcurrentHashMap<Int, McGlyph>()
 
         fun glyph(cp: Int): McGlyph? {
+            if (lookup != null) return lookup(cp)
             if (ttf != null) return ttf.glyph(cp)
             if (legacy != null) return baked[cp] ?: legacy.glyph(cp)?.let { baked.putIfAbsent(cp, it) ?: it }
             glyphs[cp]?.let { return it }
@@ -258,22 +260,22 @@ internal object McResourceFont {
     }
 
     //? if = 1.8.9 {
-    /*private class RendererState(val sheet: String, val advances: FloatArray, val unicode: Boolean, val argentum: Boolean)
+    /*private class RendererState(val sheet: String, val advances: FloatArray, val unicode: Boolean, val argentum: ArgentumGlyphs.Source?)
 
     private fun captureRenderer(): RendererState? {
         val renderer = Minecraft.getInstance().font ?: return null
-        val argentum = ArgentumCompat.sheetAdvances(renderer)
-        val advances = argentum ?: FloatArray(SHEET_CHARS.length) { renderer.getWidth(SHEET_CHARS[it]).toFloat() }
-        return RendererState(renderer.fontLocation.toString(), advances, renderer.unicode, argentum != null)
+        val argentum = if (ArgentumGlyphs.available) ArgentumGlyphs.Source(renderer) else null
+        val advances = FloatArray(SHEET_CHARS.length) { renderer.getWidth(SHEET_CHARS[it]).toFloat() }
+        return RendererState(renderer.fontLocation.toString(), advances, renderer.unicode, argentum)
     }
 
     private fun loadRendererFont(rm: ResourceManager, renderer: RendererState): Font {
+        renderer.argentum?.let { return Font(listOf(Layer(emptyMap(), emptyMap(), lookup = it::glyph))) }
         val glyphs = HashMap<Int, McGlyph>()
         glyphs[' '.code] = McGlyph(null, 0f, 0f, 0f, 0f, 0f, 0f, 0f, renderer.advances[SHEET_CHARS.indexOf(' ')], 1f)
         if (!renderer.unicode) loadRendererSheet(rm, renderer, glyphs)
         val layers = arrayListOf(Layer(glyphs, emptyMap()))
-        val vanillaWhole = !renderer.argentum && !renderer.unicode
-        loadLegacyUnicode(rm, "minecraft:font/glyph_sizes.bin", "minecraft:font/unicode_page_%s.png", if (vanillaWhole) 1f else 0.5f, if (vanillaWhole) 0f else 0.5f)
+        loadLegacyUnicode(rm, "minecraft:font/glyph_sizes.bin", "minecraft:font/unicode_page_%s.png", if (renderer.unicode) 0.5f else 1f, if (renderer.unicode) 0.5f else 0f)
             ?.let { layers += Layer(emptyMap(), emptyMap(), legacy = it) }
         return Font(layers)
     }

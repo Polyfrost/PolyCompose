@@ -91,6 +91,9 @@ repositories {
         maven("https://maven.cloverclient.com/releases") {
             content { includeGroup("pl.tomgirl") }
         }
+        maven("https://maven.taumc.org/releases") {
+            content { includeGroup("dev.rdh") }
+        }
     }
     mavenLocal()
     mavenCentral()
@@ -148,6 +151,7 @@ dependencies {
         })
         ploceus.dependOsl(dep("osl"))
         modApi("pl.tomgirl:pylon:${dep("pylon")}")
+        modCompileOnly("dev.rdh:argentum:${dep("argentum")}") { isTransitive = false }
         val lwjglStb = "org.lwjgl:lwjgl-stb:3.4.3"
         api(lwjglStb) { isTransitive = false }
         include(lwjglStb)
