@@ -37,6 +37,10 @@ internal class ComposeScreenProcessor(screen: ComposeScreen) : ScreenProcessor<C
         Direction(ControlifyBindings.GUI_NAVI_RIGHT, GamepadInputs.DPAD_RIGHT_BUTTON, FocusDirection.Right, InputConstants.KEY_RIGHT),
     )
 
+    override fun handleComponentNavOverride(controller: ControllerEntity): Boolean = false
+
+    override fun handleComponentButtonOverride(controller: ControllerEntity): Boolean = false
+
     override fun handleComponentNavigation(controller: ControllerEntity) {
         screen.controllerKeepFocus()
         val input = controller.input().orElse(null) ?: return
