@@ -110,13 +110,14 @@ object McPlayerFaces {
         @Volatile var fetching = false
         var attempts = 0
         var clientKey: String? = null
+        var clientTexture: Any? = null
         var client: McSkinLayers? = null
         var custom: McSkinLayers? = null
         var clientCheckedAt = 0L
         @Volatile var lastUsed = 0L
     }
 
-    private class TextureLayers(val result: McSkinLayersResult, val readAt: Long)
+    private class TextureLayers(val result: McSkinLayersResult, val readAt: Long, val location: Identifier?, val owner: Any?)
 
     private val revisionState = mutableIntStateOf(0)
     private val entries = lru<UUID, Entry>()
@@ -180,21 +181,24 @@ object McPlayerFaces {
     fun layers(texture: String): McSkinLayersResult {
         ensureHooks()
         val now = System.nanoTime()
-        synchronized(textures) {
-            val known = textures[texture]
-            if (known != null && (known.result is McSkinLayersResult.Loaded || now - known.readAt < UNREADABLE_RETRY_NS)) return known.result
+        val render = RenderThread.isCurrent()
+        val known = synchronized(textures) { textures[texture] }
+        if (known != null && (known.result is McSkinLayersResult.Loaded || now - known.readAt < UNREADABLE_RETRY_NS)) {
+            if (!render || known.location == null || textureOwner(known.location) === known.owner) return known.result
         }
-        if (!RenderThread.isCurrent()) return McSkinLayersResult.Pending
+        if (!render) return McSkinLayersResult.Pending
         val location = parse(texture) ?: return McSkinLayersResult.Unreadable
-        when (download(location)) {
-            Download.PENDING -> return McSkinLayersResult.Pending
-            Download.FAILED -> return McSkinLayersResult.Unreadable.also { synchronized(textures) { textures[texture] = TextureLayers(it, now) } }
-            Download.DONE -> Unit
+        val result = when (download(location)) {
+            Download.PENDING -> McSkinLayersResult.Pending
+            Download.FAILED -> McSkinLayersResult.Unreadable
+            Download.DONE -> {
+                val bitmap = readTexture(location) ?: McResources.image(location.namespace, location.path)
+                bitmap?.let { buildLayers(texture, it, opaqueFace = false) }?.let(McSkinLayersResult::Loaded)
+                    ?: if (awaitingUpload(location)) McSkinLayersResult.Pending else McSkinLayersResult.Unreadable
+            }
         }
-        val bitmap = readTexture(location) ?: McResources.image(location.namespace, location.path)
-        val result = bitmap?.let { buildLayers(texture, it, opaqueFace = false) }?.let(McSkinLayersResult::Loaded)
-            ?: McSkinLayersResult.Unreadable
-        synchronized(textures) { textures[texture] = TextureLayers(result, now) }
+        val owner = if (result is McSkinLayersResult.Loaded) textureOwner(location) else null
+        synchronized(textures) { textures[texture] = TextureLayers(result, now, location, owner) }
         return result
     }
 
@@ -232,6 +236,7 @@ object McPlayerFaces {
             for (entry in entries.values) {
                 entry.client = null
                 entry.clientKey = null
+                entry.clientTexture = null
                 entry.clientCheckedAt = 0L
             }
         }
@@ -273,7 +278,8 @@ object McPlayerFaces {
         entry.clientCheckedAt = now
         val location = runCatching { clientSkin(entry.id) }.getOrNull()
         val key = location?.toString()
-        if (key != null && key == entry.clientKey) return
+        val owner = location?.let(::textureOwner)
+        if (key != null && key == entry.clientKey && owner === entry.clientTexture) return
         val read = when {
             location == null || download(location) != Download.DONE -> null
             key == defaultKey(entry.id) -> defaultLayers(entry.id).also { forgetCustom(entry) }
@@ -282,10 +288,11 @@ object McPlayerFaces {
                 ?.also { entry.custom = it }
         }
         entry.clientKey = if (read != null) key else null
+        entry.clientTexture = if (read != null) owner else null
         val layers = read ?: entry.custom
         if (layers === entry.client) return
         entry.client = layers
-        if (layers != null || entry.fetched == null) bump()
+        bump()
     }
 
     private fun forgetCustom(entry: Entry) {
@@ -297,8 +304,10 @@ object McPlayerFaces {
     }
 
     private fun ensureFetch(entry: Entry) {
-        if (entry.settled || entry.fetching) return
-        entry.fetching = true
+        synchronized(entry) {
+            if (entry.settled || entry.fetching) return
+            entry.fetching = true
+        }
         enqueueFetch(entry)
     }
 
@@ -433,6 +442,20 @@ object McPlayerFaces {
         return Download.DONE
     }
 
+    private fun textureOwner(location: Identifier): Any? = runCatching { Minecraft.getInstance().textureManager.getTexture(location) }.getOrNull()
+
+    private fun awaitingUpload(location: Identifier): Boolean {
+        //? if >= 1.21.4 {
+        return false
+        //?} elif > 1.8.9 {
+        /*val texture = Minecraft.getInstance().textureManager.getTexture(location) ?: return false
+        return glWidth(texture.id) <= 0
+        *///?} else {
+        /*val texture = Minecraft.getInstance().textureManager.getTexture(location) ?: return true
+        return glWidth(texture.glId) <= 0
+        *///?}
+    }
+
     private fun readTexture(location: Identifier): PolyBitmap? {
         val mc = Minecraft.getInstance()
         //? if >= 1.21.4 {
@@ -481,6 +504,17 @@ object McPlayerFaces {
             val out = ByteArray(w * h * 4)
             buffer.get(out)
             return PolyBitmap(w, h, out)
+        } finally {
+            bindTexture(previous)
+        }
+    }
+
+    private fun glWidth(id: Int): Int {
+        if (id <= 0) return 0
+        val previous = GL11.glGetInteger(GL11.GL_TEXTURE_BINDING_2D)
+        bindTexture(id)
+        try {
+            return GL11.glGetTexLevelParameteri(GL11.GL_TEXTURE_2D, 0, GL11.GL_TEXTURE_WIDTH)
         } finally {
             bindTexture(previous)
         }
