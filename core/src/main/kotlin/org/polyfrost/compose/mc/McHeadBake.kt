@@ -5,8 +5,6 @@ import org.polyfrost.compose.render.PolyBitmap
 
 @ApiStatus.Internal
 public object McHeadBake {
-    private const val MAX_TEXELS = 16
-
     public fun flat(face: PolyBitmap, hat: PolyBitmap): PolyBitmap {
         requireSquare(face, hat)
         val out = ByteArray(face.pixels.size)
@@ -16,12 +14,12 @@ public object McHeadBake {
 
     public fun layered(face: PolyBitmap, hat: PolyBitmap): PolyBitmap {
         requireSquare(face, hat)
-        val n = texels(face.width)
+        val n = face.width
         val side = 9 * n
         val faceSide = 8 * n
         val inset = n / 2
-        val f = downsample(face, n).pixels
-        val h = downsample(hat, n).pixels
+        val f = face.pixels
+        val h = hat.pixels
         val out = ByteArray(side * side * 4)
         for (y in 0 until side) {
             val hatRow = y / 9 * n
@@ -36,46 +34,6 @@ public object McHeadBake {
         }
         return PolyBitmap(side, side, out)
     }
-
-    private fun downsample(layer: PolyBitmap, n: Int): PolyBitmap {
-        val src = layer.width
-        if (src == n) return layer
-        val p = layer.pixels
-        val out = ByteArray(n * n * 4)
-        for (y in 0 until n) {
-            val y0 = y * src / n
-            val y1 = (y + 1) * src / n
-            for (x in 0 until n) {
-                val x0 = x * src / n
-                val x1 = (x + 1) * src / n
-                var a = 0
-                var r = 0
-                var g = 0
-                var b = 0
-                for (sy in y0 until y1) {
-                    for (sx in x0 until x1) {
-                        val i = (sy * src + sx) * 4
-                        val pa = p[i + 3].toInt() and 0xFF
-                        a += pa
-                        r += (p[i].toInt() and 0xFF) * pa
-                        g += (p[i + 1].toInt() and 0xFF) * pa
-                        b += (p[i + 2].toInt() and 0xFF) * pa
-                    }
-                }
-                val count = (y1 - y0) * (x1 - x0)
-                val o = (y * n + x) * 4
-                if (a > 0) {
-                    out[o] = ((r + a / 2) / a).toByte()
-                    out[o + 1] = ((g + a / 2) / a).toByte()
-                    out[o + 2] = ((b + a / 2) / a).toByte()
-                }
-                out[o + 3] = ((a + count / 2) / count).toByte()
-            }
-        }
-        return PolyBitmap(n, n, out)
-    }
-
-    private fun texels(size: Int): Int = minOf(size, MAX_TEXELS)
 
     private fun requireSquare(face: PolyBitmap, hat: PolyBitmap) {
         val src = face.width

@@ -40,17 +40,17 @@ class McHeadBakeTest {
         assertEquals(faceColor(7, 7), bake.argb(67, 67))
 
         val hd = McHeadBake.layered(layer(32, ::faceColor), layer(32) { _, _ -> 0 })
-        assertEquals(144, hd.width)
-        assertEquals(faceColor(3, 1), hd.argb(16, 8))
+        assertEquals(288, hd.width)
+        assertEquals(faceColor(2, 0), hd.argb(32, 16))
     }
 
     @Test
     fun hdHatKeepsOnePixelFeatures() {
         val hatColor = 0xFFFF0000.toInt()
         val bake = McHeadBake.layered(layer(32, ::faceColor), layer(32) { x, y -> if (x == 3 && y == 0) hatColor else 0 })
-        val texel = bake.argb(9, 0)
-        assertEquals(64, texel ushr 24)
-        assertEquals(0xFF, (texel shr 16) and 0xFF)
+        assertEquals(hatColor, bake.argb(27, 0))
+        assertEquals(hatColor, bake.argb(35, 8))
+        assertEquals(0, bake.argb(36, 0) ushr 24)
         assertEquals(0, bake.argb(0, 0) ushr 24)
     }
 

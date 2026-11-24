@@ -108,6 +108,7 @@ object McPlayerFaces {
         @Volatile var fetched: McSkinLayers? = null
         @Volatile var settled = false
         @Volatile var fetching = false
+        @Volatile var generation = 0
         var attempts = 0
         var clientKey: String? = null
         var clientTexture: Any? = null
@@ -183,8 +184,12 @@ object McPlayerFaces {
         val now = System.nanoTime()
         val render = RenderThread.isCurrent()
         val known = synchronized(textures) { textures[texture] }
-        if (known != null && (known.result is McSkinLayersResult.Loaded || now - known.readAt < UNREADABLE_RETRY_NS)) {
-            if (!render || known.location == null || textureOwner(known.location) === known.owner) return known.result
+        if (known != null) {
+            if (known.result !is McSkinLayersResult.Loaded) {
+                if (now - known.readAt < UNREADABLE_RETRY_NS) return known.result
+            } else if (!render || known.location == null || textureOwner(known.location) === known.owner) {
+                return known.result
+            }
         }
         if (!render) return McSkinLayersResult.Pending
         val location = parse(texture) ?: return McSkinLayersResult.Unreadable
@@ -298,10 +303,12 @@ object McPlayerFaces {
 
     private fun forgetCustom(entry: Entry) {
         entry.custom = null
-        if (entry.fetched == null || entry.fetching) return
-        entry.fetched = null
-        entry.settled = false
-        entry.attempts = 0
+        synchronized(entry) {
+            entry.generation++
+            entry.fetched = null
+            entry.settled = false
+            entry.attempts = 0
+        }
     }
 
     private fun ensureFetch(entry: Entry) {
@@ -334,13 +341,17 @@ object McPlayerFaces {
     }
 
     private fun fetch(entry: Entry) {
+        val generation = entry.generation
         val outcome = runCatching { download(entry.id) }
         val layers = outcome.getOrNull()
         if (outcome.isSuccess) {
             RenderThread.schedule {
-                entry.fetched = layers
-                entry.settled = true
-                entry.fetching = false
+                synchronized(entry) {
+                    entry.fetching = false
+                    if (entry.generation != generation) return@schedule
+                    entry.fetched = layers
+                    entry.settled = true
+                }
                 if (layers != null) bump()
             }
             return
