@@ -243,12 +243,14 @@ class PolyTessellatorTest {
 
     private fun assertWinding(b: Batch) {
         for (q in 0 until b.colors.size / 4) {
-            var a = 0f
+            val o = q * 16
+            var a = 0.0
             for (i in 0 until 4) {
-                val p = (q * 4 + i) * 4; val n = (q * 4 + (i + 1) % 4) * 4
-                a += b.verts[p] * b.verts[n + 1] - b.verts[n] * b.verts[p + 1]
+                val p = o + i * 4; val n = o + (i + 1) % 4 * 4
+                a += (b.verts[p] - b.verts[o].toDouble()) * (b.verts[n + 1] - b.verts[o + 1].toDouble()) -
+                    (b.verts[n] - b.verts[o].toDouble()) * (b.verts[p + 1] - b.verts[o + 1].toDouble())
             }
-            assertTrue(a <= 1e-3f, "quad $q wound the wrong way")
+            assertTrue(a <= 1e-3, "quad $q wound the wrong way")
         }
     }
 
@@ -429,6 +431,19 @@ class PolyTessellatorTest {
         for (y in listOf(11.9f, 21.9f, 28.9f)) assertTrue(b.alphaAt(10.25f, y) in 60..68, "a quarter covered across the edge at $y")
         for (y in listOf(11.9f, 21.9f, 28.9f)) assertTrue(b.alphaAt(29.75f, y) in 60..68, "a quarter covered across the far edge at $y")
         assertEquals(255, b.alphaAt(55.3f, 5.7f), "restore keeps the hole from outliving its scope")
+    }
+
+    @Test
+    fun clippedImageSliversKeepWindingFarFromOrigin() {
+        val bmp = PolyBitmap(4, 4, ByteArray(64) { -1 })
+        for ((x, y) in listOf(0f to 0f, 3000.6f to 1500.4f)) {
+            Recorder().run {
+                translate(x, y)
+                clipRRect(0f, 0f, 100f, 100f, 20f)
+                image(bmp, 0f, 0f, 100f, 100f, 0.25f, 0.25f, 0.75f, 0.75f, -1)
+                done()
+            }.forEach(::assertWinding)
+        }
     }
 
     @Test
