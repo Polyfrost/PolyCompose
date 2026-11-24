@@ -110,10 +110,10 @@ private object GenericFonts {
     }
 }
 
-private const val LIGATURE_PLACEHOLDER = '\uFFFF'
+internal const val LIGATURE_PLACEHOLDER = '\uFFFF'
 
 // Minecraft ships ICU4J; without it Arabic is drawn unjoined and right-to-left brackets unmirrored
-private object Icu {
+internal object Icu {
     private val shaping = runCatching { ArabicShaping(ArabicShaping.LETTERS_SHAPE or ArabicShaping.LENGTH_FIXED_SPACES_NEAR) }.getOrNull()
     private val mirroring = runCatching { UCharacter.getMirror('('.code) == ')'.code }.getOrDefault(false)
 
@@ -131,7 +131,7 @@ private object Icu {
 }
 
 // keeps combining marks after their base so they still draw over it
-private fun reversedClusters(text: String): String {
+internal fun reversedClusters(text: String): String {
     val it = BreakIterator.getCharacterInstance().also { b -> b.setText(text) }
     val out = StringBuilder(text.length)
     var end = it.last()
