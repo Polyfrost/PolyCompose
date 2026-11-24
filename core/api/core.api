@@ -1639,6 +1639,10 @@ public final class org/polyfrost/compose/profile/SpikeReason : java/lang/Enum {
 	public static fun values ()[Lorg/polyfrost/compose/profile/SpikeReason;
 }
 
+public final class org/polyfrost/compose/render/BidiTextKt {
+	public static final fun visualOrder (Ljava/lang/String;)Ljava/lang/String;
+}
+
 public abstract interface class org/polyfrost/compose/render/CapturingRenderer {
 	public abstract fun append (Ljava/lang/Object;)V
 	public abstract fun mark ()Ljava/lang/Object;

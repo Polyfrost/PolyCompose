@@ -1294,6 +1294,7 @@ public abstract class PolyTessellator : PolyRenderer {
 
     override fun mcText(text: String, x: Float, y: Float, color: Int, shadow: Boolean, scale: Float, literal: Boolean) {
         if (cpuOnly) return
+        val text = mcVisualOrder(text, literal)
         val x = if (snapMcX) mcLineLeft(x) else x
         if (shadow) {
             beginDraw()
@@ -1302,6 +1303,8 @@ public abstract class PolyTessellator : PolyRenderer {
         beginDraw()
         mcLines(text, x, y, 0f, color, scale, false, literal)
     }
+
+    private fun mcVisualOrder(text: String, literal: Boolean): String = if (!literal && '§' in text) text else visualOrder(text)
 
     private fun mcLines(text: String, x: Float, y: Float, dy: Float, color: Int, scale: Float, shadow: Boolean, literal: Boolean) {
         var start = 0
@@ -1374,6 +1377,7 @@ public abstract class PolyTessellator : PolyRenderer {
     internal fun mcTextStroke(text: String, x: Float, y: Float, color: Int, scale: Float, literal: Boolean, snapX: Boolean) {
         if (!layered || !blendSupported(PolyRenderer.BLEND_DST_OUT) || !McGlyphs.available()) return mcText(text, x, y, color, false, scale, literal, snapX)
         if (cpuOnly) return
+        val text = mcVisualOrder(text, literal)
         withMcX(snapX) {
             val left = if (snapMcX) mcLineLeft(x) else x
             val outer = wantBlend
