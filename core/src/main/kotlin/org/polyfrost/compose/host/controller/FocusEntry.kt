@@ -24,12 +24,16 @@ public fun Modifier.focusEntry(target: FocusRequester, enabled: Boolean = true):
         }
     }.focusGroup()
 
+private const val SHOW_FOCUS_FRAMES = 30
+
 public fun Modifier.focusWhenShown(shown: Boolean, key: Any? = null): Modifier = composed {
     val requester = remember { FocusRequester() }
     LaunchedEffect(shown, key) {
         if (!shown || !Controllers.isActive) return@LaunchedEffect
-        withFrameNanos { }
-        runCatching { requester.requestFocus(FocusDirection.Down) }
+        repeat(SHOW_FOCUS_FRAMES) {
+            withFrameNanos { }
+            if (runCatching { requester.requestFocus(FocusDirection.Down) }.getOrDefault(false)) return@LaunchedEffect
+        }
     }
     focusRequester(requester).focusGroup()
 }
