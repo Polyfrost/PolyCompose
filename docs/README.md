@@ -3,6 +3,7 @@
 PolyCompose runs Compose Multiplatform inside Minecraft. You write ordinary `@Composable` functions and it handles drawing, input, controllers and the differences between game versions. Your screens, menus and HUD elements all come out of the same code on 1.8.9 and on 1.21.1 through 26.3.
 
 - [Screens](screens.md)
+- [Controllers](controllers.md)
 - [HUD layers](hud.md)
 - [Minecraft content and images](content.md)
 - [Host hooks](hooks.md)

@@ -1,18 +1,15 @@
+@file:Suppress("DEPRECATION")
+
 package org.polyfrost.compose.minecraft.compat.controlify
 
-import java.util.concurrent.CopyOnWriteArrayList
-import org.apache.logging.log4j.LogManager
-import org.polyfrost.compose.host.HostCallbacks
-import org.polyfrost.compose.host.HostErrors
+import org.polyfrost.compose.host.controller.Controllers
+import org.polyfrost.compose.host.controller.ControllerAction as CoreControllerAction
 
+@Deprecated("Use org.polyfrost.compose.host.controller.Controllers")
 object ControllerActions {
-    private val LOGGER = LogManager.getLogger("PolyCompose/Controller")
-
-    private val ID_PATTERN = Regex("[a-z0-9_.-]+:[a-z0-9_./-]+")
-
     @JvmStatic
     val isAvailable: Boolean
-        get() = ControllerBridge.backend != null
+        get() = Controllers.isAvailable
 
     @JvmStatic
     @JvmOverloads
@@ -21,73 +18,33 @@ object ControllerActions {
         name: String,
         defaultButton: ControllerButton = ControllerButton.NONE,
         category: String = id.substringBefore(':'),
-    ): ControllerAction {
-        require(ID_PATTERN.matches(id)) { "Controller action id must look like namespace:path, got '$id'" }
-        val state = ControllerBridge.backend?.let { backend ->
-            try {
-                backend.register(id, name, category, defaultButton)
-            } catch (t: Throwable) {
-                HostErrors.warn("Could not register controller action $id", t, LOGGER)
-                null
-            }
-        }
-        return ControllerAction(id, name, defaultButton, state)
-    }
+    ): ControllerAction = ControllerAction(Controllers.register(id, name, defaultButton.toCore(), category), defaultButton)
 }
 
+@Deprecated("Use org.polyfrost.compose.host.controller.ControllerAction")
 class ControllerAction internal constructor(
-    val id: String,
-    val name: String,
+    private val delegate: CoreControllerAction,
     val defaultButton: ControllerButton,
-    private val state: ActionState?,
 ) : AutoCloseable {
-    private val listeners = CopyOnWriteArrayList<Runnable>()
+    val id: String
+        get() = delegate.id
 
-    @Volatile
-    private var closed = false
+    val name: String
+        get() = delegate.name
 
     val isActive: Boolean
-        get() = state != null && !closed
+        get() = delegate.isActive
 
     val isRebindable: Boolean
-        get() = isActive && state?.isRebindable == true
+        get() = delegate.isRebindable
 
     val isPressed: Boolean
-        get() = isActive && state?.isDown() == true
+        get() = delegate.isPressed
 
     val justPressed: Boolean
-        get() = isActive && state?.justPressed() == true
+        get() = delegate.justPressed
 
-    fun onPress(listener: Runnable): AutoCloseable {
-        if (!isActive) return AutoCloseable {}
-        listeners += listener
-        ControllerBridge.watch(this)
-        return AutoCloseable {
-            listeners -= listener
-            if (listeners.isEmpty()) ControllerBridge.unwatch(this)
-        }
-    }
+    fun onPress(listener: Runnable): AutoCloseable = delegate.onPress(listener)
 
-    internal fun tick() {
-        if (listeners.isEmpty() || !justPressed) return
-        HostCallbacks.each(listeners, "ControllerAction.onPress") { it.run() }
-    }
-
-    override fun close() {
-        closed = true
-        listeners.clear()
-        ControllerBridge.unwatch(this)
-    }
-}
-
-internal interface ActionState {
-    val isRebindable: Boolean
-
-    fun isDown(): Boolean
-
-    fun justPressed(): Boolean
-}
-
-internal interface ControllerBackend {
-    fun register(id: String, name: String, category: String, button: ControllerButton): ActionState
+    override fun close() = delegate.close()
 }

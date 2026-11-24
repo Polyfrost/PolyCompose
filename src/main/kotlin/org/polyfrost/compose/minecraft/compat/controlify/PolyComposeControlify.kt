@@ -15,6 +15,7 @@ import java.util.function.Consumer
 import kotlin.math.min
 import org.apache.logging.log4j.LogManager
 import org.polyfrost.compose.host.HostErrors
+import org.polyfrost.compose.host.controller.Controllers
 import org.polyfrost.compose.minecraft.hud.HudInput
 import org.polyfrost.compose.minecraft.platform.McScreens
 import org.polyfrost.compose.minecraft.screen.ComposeScreen
@@ -30,21 +31,37 @@ class PolyComposeControlify : ControlifyEntrypoint {
         } catch (t: Throwable) {
             HostErrors.warn("Could not register the Compose screen controller support", t, LOGGER)
         }
+        try {
+            ComposeGuiBindings.registerAll()
+            Controllers.install(ControlifyActions)
+        } catch (t: Throwable) {
+            HostErrors.warn("Controller actions are unavailable", t, LOGGER)
+        }
     }
 
     override fun onControlifyInit(context: InitContext) {
         try {
             ControlifyEvents.ACTIVE_CONTROLLER_TICKED.register { event -> onControllerTick(event.controller()) }
+            ControlifyEvents.INPUT_MODE_CHANGED.register { event -> Controllers.reportActive(event.mode().isController) }
+            ControlifyEvents.LOOK_INPUT_MODIFIER.register { event ->
+                if (Controllers.isLookCaptured) event.lookInput().zero()
+            }
         } catch (t: Throwable) {
-            HostErrors.warn("Could not register the controller tick listener", t, LOGGER)
+            HostErrors.warn("Could not register the controller listeners", t, LOGGER)
         }
     }
 
-    override fun onControllersDiscovered(controlify: ControlifyApi) = Unit
+    override fun onControllersDiscovered(controlify: ControlifyApi) {
+        try {
+            Controllers.reportActive(controlify.currentInputMode().isController)
+        } catch (t: Throwable) {
+            HostErrors.warn("Could not read the controller input mode", t, LOGGER)
+        }
+    }
 
     private fun onControllerTick(controller: ControllerEntity) {
         try {
-            ControllerBridge.tick()
+            Controllers.tick()
             routeHudScroll(controller)
         } catch (t: Throwable) {
             HostErrors.warn("Controller tick failed", t, LOGGER)

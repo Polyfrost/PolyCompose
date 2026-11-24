@@ -39,9 +39,7 @@ Compose animations already ask for frames on their own, so most animated screens
 
 ## Controllers
 
-If the player has Controlify installed, every `ComposeScreen` works with a controller and you don't have to write anything for it. The stick and d-pad move focus between clickable elements, A clicks, B goes back, and text fields open Controlify's on-screen keyboard docked under your screen with a preview of the field. This needs 1.21.1 or newer, since Controlify doesn't exist on 1.8.9.
-
-Clickable things (buttons, `Modifier.clickable`, text fields) are picked up automatically. If something can't be reached, make sure it's focusable or clickable.
+If the player has Controlify installed, every `ComposeScreen` works with a controller and you don't have to write anything for it. The d-pad acts like the arrow keys, A clicks, B goes back, and text fields open Controlify's on-screen keyboard docked under your screen with a preview of the field. See [Controllers](controllers.md) for button actions and the rest.
 
 ## Stopping the screen from closing
 

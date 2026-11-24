@@ -1,5 +1,16 @@
 # Changelog
 
+## [Unreleased]
+
+- The d-pad and left stick send arrow keys to the focused element before moving focus, so sliders, menus and anything else that works with a keyboard also works with a controller
+- A sends Enter to the focused element before the screen's own key handling, so screens that react to Enter no longer take presses away from the focused button
+- X opens the focused element's context menu when it supports the Menu key
+- Added `Modifier.controllerPan`, which hands the right stick to a focused element instead of scrolling, for things like 3D previews and zoomed images
+- Added `Modifier.controllerAction` for running code when X, Y, a bumper, a trigger, a stick click, Back or Start is pressed on a focused element. Its label shows in Controlify's button guide
+- Added `Controllers` to `polycompose-core`, so mods that only depend on the core can register controller actions, check `Controllers.isActive`, read the sticks and stop the right stick from turning the camera while an overlay is open
+- Added `InputKind` and `ComposeOptions.onInputKind(owner, kind)`, which now reports controller navigation too, and `KeyEvent.isFromController`
+- `org.polyfrost.compose.minecraft.compat.controlify.ControllerActions`, `ControllerAction` and `ControllerButton` are deprecated in favour of the new classes in `org.polyfrost.compose.host.controller`
+
 ## [3.0.9]
 
 - Fixed enchanted item icons on 1.21.11 and newer being drawn by the game's item renderer instead of the icon atlas, which has PolyCompose's own glint

@@ -47,6 +47,12 @@ import org.polyfrost.compose.host.KeyState
 import org.polyfrost.compose.host.LocalUiOversample
 import org.polyfrost.compose.host.LocalComposeOptions
 import org.polyfrost.compose.host.SceneKind
+import org.polyfrost.compose.host.InputKind
+import org.polyfrost.compose.host.controller.ControllerButton
+import org.polyfrost.compose.host.controller.ControllerHint
+import org.polyfrost.compose.host.controller.ControllerTargets
+import org.polyfrost.compose.host.controller.Controllers
+import org.polyfrost.compose.host.controller.LocalControllerTargets
 import org.polyfrost.compose.minecraft.compat.controlify.ControllerBridge
 import org.polyfrost.compose.minecraft.compat.controlify.FieldPreview
 import org.polyfrost.compose.minecraft.compat.controlify.KeyboardPreview
@@ -331,6 +337,7 @@ abstract class ComposeScreen(
                 *wheel.provided(),
                 LocalComposeOptions provides options,
                 LocalTickActivity provides tickActivity,
+                LocalControllerTargets provides actionTargets,
             ) {
                 val focusManager = LocalFocusManager.current
                 SideEffect { controllerFocus = focusManager }
@@ -848,7 +855,7 @@ abstract class ComposeScreen(
     /*override fun mouseClicked(x: Double, y: Double, button: Int): Boolean {
     *///?} else
     //override fun mouseClicked(x: Int, y: Int, button: Int) {
-        reportInputKind(false)
+        reportInputKind(InputKind.Pointer)
         hideControllerFocus()
         //~ if = 1.8.9 'button' -> 'KeyCodes.mouseFromLegacy(button)' {
         tapClean = false
@@ -1140,12 +1147,12 @@ abstract class ComposeScreen(
     private fun interceptMouse(code: Int, pressed: Boolean): Boolean =
         HostCallbacks.call(options, "ComposeOptions.consumeMouse", false) { options.consumeMouse(this, code, pressed) }
 
-    private fun reportInputKind(keyboard: Boolean) {
-        HostCallbacks.call(options, "ComposeOptions.onInputKind", Unit) { options.onInputKind(this, keyboard) }
+    private fun reportInputKind(kind: InputKind) {
+        HostCallbacks.call(options, "ComposeOptions.onInputKind", Unit) { options.onInputKind(this, kind) }
     }
 
     private fun dispatchKeyPressed(bindingKey: Int, shortcutKey: Int, modifiers: Int): Boolean {
-        if (bindingKey in navigationKeys) reportInputKind(true)
+        if (bindingKey in navigationKeys) reportInputKind(InputKind.Keyboard)
         if (bindingKey == InputConstants.KEY_ESCAPE) {
             if (HostCallbacks.call(options, "ComposeOptions.consumeEscape", false) { options.consumeEscape(this) }) {
                 consumedKeys += bindingKey
@@ -1310,9 +1317,58 @@ abstract class ComposeScreen(
     }
 
     internal fun controllerBack(): Boolean {
-        val handled = controllerKey(InputConstants.KEY_ESCAPE, true)
-        controllerKey(InputConstants.KEY_ESCAPE, false)
+        reportInputKind(InputKind.Controller)
+        return Controllers.dispatching {
+            val handled = controllerKey(InputConstants.KEY_ESCAPE, true)
+            controllerKey(InputConstants.KEY_ESCAPE, false)
+            handled
+        }
+    }
+
+    internal fun controllerPress() {
+        if (!showing) return
+        reportInputKind(InputKind.Controller)
+        val key = InputConstants.KEY_RETURN
+        val shortcut = controllerShortcut(key)
+        Controllers.dispatching {
+            if (!sendKeyPressedEvent(key, shortcut, 0)) handleKeyPressed(key, 0)
+            sendKeyReleasedEvent(key, shortcut, 0)
+        }
+    }
+
+    internal fun controllerTap(key: Int): Boolean {
+        if (!showing) return false
+        val shortcut = controllerShortcut(key)
+        return Controllers.dispatching {
+            val consumed = sendKeyPressedEvent(key, shortcut, 0)
+            sendKeyReleasedEvent(key, shortcut, 0)
+            consumed
+        }
+    }
+
+    internal val actionTargets = ControllerTargets()
+
+    internal fun controllerHints(): List<ControllerHint> = if (liveScene() == null) emptyList() else actionTargets.hints()
+
+    internal fun controllerButton(button: ControllerButton): Boolean {
+        if (!showing) return false
+        reportInputKind(InputKind.Controller)
+        if (liveScene() == null) return false
+        val handled = actionTargets.dispatch(button)
+        if (handled) sceneDirty = true
         return handled
+    }
+
+    internal fun controllerNavigate(direction: FocusDirection, arrowKey: Int): Boolean {
+        if (!showing) return false
+        reportInputKind(InputKind.Controller)
+        val focused = withScene { it.focusManager.getFocusRect(false) } != null
+        if (focused && controllerTextField() == null && controllerTap(arrowKey)) {
+            controllerFocusVisible = true
+            sceneDirty = true
+            return true
+        }
+        return controllerMoveFocus(direction)
     }
 
     internal fun controllerTextField(): Rect? {
@@ -1321,6 +1377,7 @@ abstract class ComposeScreen(
     }
 
     internal fun controllerMoveFocus(direction: FocusDirection): Boolean = withScene { scene ->
+        reportInputKind(InputKind.Controller)
         val manager = scene.focusManager
         val focus = SceneFocus.of(manager) ?: controllerFocus
         val moved = if (manager.getFocusRect(false) == null) {
@@ -1337,12 +1394,13 @@ abstract class ComposeScreen(
 
     internal fun controllerScroll(delta: Offset) {
         if (delta == Offset.Zero || !showing) return
+        reportInputKind(InputKind.Controller)
         val pointer = pointerPosition()
         val anchor = withScene { it.focusManager.getFocusRect(false)?.center } ?: pointer
         wheel.stop()
         withScene {
             it.sendPointerEvent(PointerEventType.Move, anchor)
-            SceneWheel.scrollDirect(it, anchor, delta)
+            Controllers.dispatching { SceneWheel.scrollDirect(it, anchor, delta) }
             if (anchor != pointer) it.sendPointerEvent(PointerEventType.Move, pointer)
         }
     }
