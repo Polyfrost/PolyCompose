@@ -918,6 +918,8 @@ public final class org/polyfrost/compose/host/controller/ControllerActionSpec {
 public final class org/polyfrost/compose/host/controller/ControllerArrowsKt {
 	public static final fun controllerArrows (Landroidx/compose/ui/Modifier;Lorg/polyfrost/compose/host/controller/ControllerAxes;)Landroidx/compose/ui/Modifier;
 	public static synthetic fun controllerArrows$default (Landroidx/compose/ui/Modifier;Lorg/polyfrost/compose/host/controller/ControllerAxes;ILjava/lang/Object;)Landroidx/compose/ui/Modifier;
+	public static final fun controllerFocusScope (Landroidx/compose/ui/Modifier;Z)Landroidx/compose/ui/Modifier;
+	public static synthetic fun controllerFocusScope$default (Landroidx/compose/ui/Modifier;ZILjava/lang/Object;)Landroidx/compose/ui/Modifier;
 	public static final fun hidesFocusRing (Landroidx/compose/ui/Modifier;)Landroidx/compose/ui/Modifier;
 }
 

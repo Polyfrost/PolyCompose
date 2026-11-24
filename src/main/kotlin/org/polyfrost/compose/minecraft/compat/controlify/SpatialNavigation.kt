@@ -14,6 +14,7 @@ import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.sqrt
 import org.polyfrost.compose.host.controller.FocusEntryKey
+import org.polyfrost.compose.host.controller.FocusScopeKey
 
 internal object SpatialNavigation {
     private const val MAX_ATTEMPTS = 8
@@ -23,16 +24,19 @@ internal object SpatialNavigation {
 
     fun move(owner: SemanticsOwner, from: Rect, focused: SemanticsNode?, direction: FocusDirection): Boolean {
         if (focused != null && canScrollFurther(focused, direction)) return false
+        val scope = focused?.let(::scopeOf)
         val nodes = owner.getAllSemanticsNodes(mergingEnabled = false)
         val candidates = ArrayList<Pair<Float, SemanticsNode>>()
         for (node in nodes) {
             if (node.id == focused?.id) continue
+            if (scope != null && !contains(scope, node)) continue
             if (SemanticsActions.RequestFocus !in node.config) continue
             val bounds = node.boundsInWindow
             if (bounds.width <= 0f || bounds.height <= 0f) continue
             val score = score(from, bounds, direction) ?: continue
             candidates += score to node
         }
+        if (candidates.isEmpty() && scope != null) return true
         candidates.sortBy { it.first }
         for ((_, node) in candidates.take(MAX_ATTEMPTS)) {
             if (focusEntryOf(node, focused)?.let { runCatching { it.requestFocus() }.getOrDefault(false) } == true) return true
@@ -60,6 +64,15 @@ internal object SpatialNavigation {
             parent = parent.parent
         }
         return false
+    }
+
+    private fun scopeOf(node: SemanticsNode): SemanticsNode? {
+        var parent = node.parent
+        while (parent != null) {
+            if (FocusScopeKey in parent.config) return parent
+            parent = parent.parent
+        }
+        return null
     }
 
     private fun focusEntryOf(node: SemanticsNode, focused: SemanticsNode?): FocusRequester? {

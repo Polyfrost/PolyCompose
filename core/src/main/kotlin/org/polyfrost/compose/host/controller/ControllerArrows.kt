@@ -26,6 +26,12 @@ public val ControllerArrowsKey: SemanticsPropertyKey<ControllerAxes> = Semantics
 @ApiStatus.Internal
 public val HidesFocusRingKey: SemanticsPropertyKey<Unit> = SemanticsPropertyKey("HidesFocusRing")
 
+@ApiStatus.Internal
+public val FocusScopeKey: SemanticsPropertyKey<Unit> = SemanticsPropertyKey("ControllerFocusScope")
+
+public fun Modifier.controllerFocusScope(enabled: Boolean = true): Modifier =
+    if (enabled) semantics { this[FocusScopeKey] = Unit } else this
+
 public fun Modifier.hidesFocusRing(): Modifier = semantics { this[HidesFocusRingKey] = Unit }
 
 public fun Modifier.controllerArrows(axes: ControllerAxes = ControllerAxes.Both): Modifier =
