@@ -20,7 +20,7 @@ public fun visualOrder(text: String): String {
 }
 
 private fun visualLine(line: String): String {
-    if (!Bidi.requiresBidi(line.toCharArray(), 0, line.length)) return line
+    if (!Bidi.requiresBidi(line.toCharArray(), 0, line.length) && line.none(::isBidiControl)) return line
     val bidi = Bidi(line, Bidi.DIRECTION_DEFAULT_LEFT_TO_RIGHT)
     val glyphs = Icu.shape(line).takeIf { it.length == line.length } ?: line
     val count = bidi.runCount
@@ -32,5 +32,7 @@ private fun visualLine(line: String): String {
         val s = glyphs.substring(bidi.getRunStart(i), bidi.getRunLimit(i))
         out.append(if (bidi.getRunLevel(i) and 1 == 0) s.replace(LIGATURE_PLACEHOLDER.toString(), "") else reversedClusters(s))
     }
-    return out.toString()
+    return out.toString().filterNot(::isBidiControl)
 }
+
+private fun isBidiControl(c: Char) = c == '\u061C' || c == '\u200E' || c == '\u200F' || c in '\u202A'..'\u202E' || c in '\u2066'..'\u2069'

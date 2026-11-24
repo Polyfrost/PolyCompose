@@ -13,6 +13,8 @@ class BidiTextTest {
         assertEquals("Astronengg - ריש", visualOrder("שיר - Astronengg"))
         assertEquals("(סקימר) ריש", visualOrder("שיר (רמיקס)"))
         assertEquals("ריש 2\nSong", visualOrder("2 שיר\nSong"))
+        assertEquals("cba", visualOrder("\u202Eabc\u202C"))
+        assertEquals("(abc", visualOrder("\u2067abc)\u2069"))
     }
 
     @Test
