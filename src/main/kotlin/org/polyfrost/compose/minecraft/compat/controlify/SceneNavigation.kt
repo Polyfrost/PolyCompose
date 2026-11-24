@@ -3,6 +3,7 @@
 package org.polyfrost.compose.minecraft.compat.controlify
 
 import androidx.compose.ui.InternalComposeUiApi
+import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusManager
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.platform.PlatformContext
@@ -66,6 +67,18 @@ internal class SceneSemantics {
     }
 
     fun isAlive(owner: SemanticsOwner): Boolean = owner in owners
+
+    fun moveSpatially(direction: FocusDirection): Boolean {
+        for (owner in owners.toList()) {
+            for (node in owner.getAllSemanticsNodes(mergingEnabled = false)) {
+                if (!node.config.getOrElse(SemanticsProperties.Focused) { false }) continue
+                val bounds = node.boundsInWindow
+                if (bounds.width <= 0f || bounds.height <= 0f) continue
+                return SpatialNavigation.move(owner, bounds, node, direction)
+            }
+        }
+        return false
+    }
 
     fun focusNearest(owner: SemanticsOwner, near: Rect): Boolean {
         val candidates = ArrayList<Pair<Float, SemanticsNode>>()

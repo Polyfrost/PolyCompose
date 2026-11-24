@@ -9,9 +9,15 @@ import androidx.compose.ui.composed
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.semantics.SemanticsPropertyKey
+import androidx.compose.ui.semantics.semantics
+import org.jetbrains.annotations.ApiStatus
+
+@ApiStatus.Internal
+public val FocusEntryKey: SemanticsPropertyKey<FocusRequester> = SemanticsPropertyKey("FocusEntry")
 
 public fun Modifier.focusEntry(target: FocusRequester, enabled: Boolean = true): Modifier =
-    focusProperties {
+    then(if (enabled) Modifier.semantics { this[FocusEntryKey] = target } else Modifier).focusProperties {
         onEnter = {
             if (enabled) runCatching { target.requestFocus() }
         }

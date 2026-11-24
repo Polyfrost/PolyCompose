@@ -1433,7 +1433,7 @@ abstract class ComposeScreen(
         val moved = if (manager.getFocusRect(false) == null) {
             manager.takeFocus(FocusDirection.Next) || focus?.moveFocus(FocusDirection.Next) == true
         } else {
-            focus?.moveFocus(direction) == true
+            controllerSemantics?.moveSpatially(direction) == true || focus?.moveFocus(direction) == true
         }
         if (moved || !controllerFocusVisible) {
             controllerFocusVisible = true
