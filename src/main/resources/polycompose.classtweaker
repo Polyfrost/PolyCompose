@@ -18,6 +18,7 @@ classTweaker v1 official
 #accessible field net/minecraft/client/render/platform/GlStateManager TEXTURES [Lnet/minecraft/client/render/platform/GlStateManager$Texture;
 #accessible field net/minecraft/client/render/platform/GlStateManager shadeModel I
 #accessible field net/minecraft/client/render/platform/GlStateManager COLOR Lnet/minecraft/client/render/platform/GlStateManager$Color;
+#accessible field net/minecraft/client/render/TextRenderer fontLocation Lnet/minecraft/resource/Identifier;
 #?}
 
 #? if < 1.21.5 && > 1.8.9 {

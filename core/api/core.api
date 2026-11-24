@@ -1061,10 +1061,15 @@ public final class org/polyfrost/compose/mc/McFontQueue {
 public final class org/polyfrost/compose/mc/McGlyph {
 	public static final field $stable I
 	public fun <init> (Lorg/polyfrost/compose/render/PolyBitmap;FFFFFFFFF)V
+	public fun <init> (Lorg/polyfrost/compose/render/PolyBitmap;FFFFFFFFFF)V
+	public fun <init> (Lorg/polyfrost/compose/render/PolyBitmap;FFFFFFFFFFF)V
+	public synthetic fun <init> (Lorg/polyfrost/compose/render/PolyBitmap;FFFFFFFFFFFILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun getAdvance ()F
 	public final fun getBitmap ()Lorg/polyfrost/compose/render/PolyBitmap;
+	public final fun getBoldAdvance ()F
 	public final fun getHeight ()F
 	public final fun getOffset ()F
+	public final fun getShadow ()F
 	public final fun getTop ()F
 	public final fun getU0 ()F
 	public final fun getU1 ()F

@@ -358,7 +358,6 @@ tasks.withType<ProcessResources>().configureEach {
         }
     } else {
         exclude("ornithe.mod.json")
-        exclude("assets/polycompose/font/legacy_default.json")
     }
     if (stonecutter.eval(mcVersion, "< 1.21.11")) {
         exclude("assets/polycompose/post_effect/**")

@@ -7,13 +7,14 @@ import kotlin.math.roundToInt
 
 /**
  * A glyph of the game's active font, drawn from the [u0]..[v1] region of [bitmap] (null for blank glyphs) and tinted by the text color.
- * Metrics are in unscaled text units: [top] is measured from the line top, and [offset] is both the bold and the shadow offset.
  */
-public class McGlyph(
+public class McGlyph @JvmOverloads constructor(
     public val bitmap: PolyBitmap?,
     public val u0: Float, public val v0: Float, public val u1: Float, public val v1: Float,
     public val top: Float, public val width: Float, public val height: Float,
     public val advance: Float, public val offset: Float,
+    public val boldAdvance: Float = offset,
+    public val shadow: Float = offset,
 ) {
     private val pixelX = bitmap?.let { (u0 * it.width).roundToInt() } ?: 0
     private val pixelY = bitmap?.let { (v0 * it.height).roundToInt() } ?: 0
@@ -68,7 +69,7 @@ public object McGlyphs {
                 continue
             }
             val g = if (cache != null && cp < CACHE) cached(cache, cp) else source?.invoke(cp)
-            w += if (g == null) bundledAdvance(cp, bold) else if (bold) g.advance + g.offset else g.advance
+            w += if (g == null) bundledAdvance(cp, bold) else if (bold) g.advance + g.boldAdvance else g.advance
         }
         return w * scale
     }

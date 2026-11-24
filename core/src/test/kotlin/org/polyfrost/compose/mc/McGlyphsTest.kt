@@ -37,4 +37,33 @@ class McGlyphsTest {
             McGlyphs.source = old
         }
     }
+
+    @Test
+    fun boldAdvanceIsSeparateFromBoldOffset() {
+        val bitmap = PolyBitmap(4, 2, ByteArray(32) { -1 })
+        val a = McGlyph(bitmap, 0f, 0f, 0.5f, 1f, 0f, 2f, 2f, 3f, 0.5f, 1f)
+        val old = McGlyphs.source
+        McGlyphs.source = { cp -> a.takeIf { cp == 'a'.code } }
+        try {
+            assertEquals((4f + 4f) * 2f, McGlyphs.width("§laa", 2f))
+            val r = Recorder().apply { mcText("§laa", 10f, 20f, -1, false, 2f) }.done()
+            assertEquals(listOf(10f, 11f, 18f, 19f), r.xs.sorted())
+        } finally {
+            McGlyphs.source = old
+        }
+    }
+
+    @Test
+    fun shadowIsSeparateFromBoldOffset() {
+        val bitmap = PolyBitmap(4, 2, ByteArray(32) { -1 })
+        val a = McGlyph(bitmap, 0f, 0f, 0.5f, 1f, 0f, 2f, 2f, 3f, 1f, 1f, 0f)
+        val old = McGlyphs.source
+        McGlyphs.source = { cp -> a.takeIf { cp == 'a'.code } }
+        try {
+            val r = Recorder().apply { mcText("§la", 10f, 20f, -1, true, 2f) }.done()
+            assertEquals(listOf(10f, 10f, 12f, 12f), r.xs.sorted())
+        } finally {
+            McGlyphs.source = old
+        }
+    }
 }

@@ -1549,8 +1549,7 @@ public abstract class PolyTessellator : PolyRenderer {
             }
             val drawn = if (shadow) (c and -0x1000000) or ((c and 0xFCFCFC) shr 2) else c
             val g = mcGlyphFor(cp)
-            // the shadow line is already one unit off, but vanilla offsets each glyph's shadow by its own offset
-            val o = if (shadow && g != null) (g.offset - 1f) * scale else 0f
+            val o = if (shadow && g != null) (g.shadow - 1f) * scale else 0f
             shearX = if (italic) italicShear else 0f
             shearBase = (top + o + 4f * scale) * s.sy + s.ty
             val start = pen
@@ -1560,7 +1559,7 @@ public abstract class PolyTessellator : PolyRenderer {
                     selfOverlapping()
                     mcGlyph(g, pen + o + g.offset * scale, top + o, scale, drawn)
                 }
-                pen += (g.advance + if (bold) g.offset else 0f) * scale
+                pen += (g.advance + if (bold) g.boldAdvance else 0f) * scale
             } else {
                 val main = r?.let { face(it, if (bold) MC_BOLD_FACE else MC_FACE) }
                 pen += if (r != null && main != null && main.glyph(cp) != 0) {
@@ -4534,7 +4533,7 @@ public abstract class PolyTessellator : PolyRenderer {
                         val g = cache.getOrPut(rg) { mcRaster(rg)?.let { mcInk(it, italic) } }
                         place(g, pen)
                         if (bold) place(g, pen + rg.offset)
-                        pen += rg.advance + if (bold) rg.offset else 0f
+                        pen += rg.advance + if (bold) rg.boldAdvance else 0f
                     } else {
                         val main = r.face(if (bold) "minecraft-bold" else "minecraft")
                         val face: PolyGlyphPage.Face

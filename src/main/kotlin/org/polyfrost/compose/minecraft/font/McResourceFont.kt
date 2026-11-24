@@ -24,20 +24,39 @@ import org.polyfrost.compose.minecraft.platform.RenderThread
 import org.slf4j.LoggerFactory
 //? if > 1.8.9 {
 import net.minecraft.resources.Identifier
-//?} else
-//import net.ornithemc.osl.core.api.util.NamespacedIdentifiers
+//?} else {
+/*import net.ornithemc.osl.core.api.util.NamespacedIdentifiers
+import org.polyfrost.compose.minecraft.compat.ArgentumCompat
+*///?}
 
-// below 1.21.11 the tessellator can't draw with the game's font, so its providers are read from the active resources instead
 internal object McResourceFont {
     private val LOGGER = LoggerFactory.getLogger("PolyCompose/McResourceFont")
 
-    //~ if = 1.8.9 'minecraft:default' -> 'polycompose:legacy_default'
     private const val ROOT_FONT = "minecraft:default"
     private const val OPTION_UNIFORM = 1
     private const val OPTION_JP = 2
     private const val UNIHEX_BLOCK_MASK = 0x7F
     private const val UNIHEX_HEIGHT = 16
     private const val UNIHEX_SHEET_WIDTH = 256
+    //? if = 1.8.9 {
+    /*private const val SHEET_CHARS =
+        "ÀÁÂÈÊËÍÓÔÕÚßãõğİ" +
+        "ıŒœŞşŴŵžȇ\u0000\u0000\u0000\u0000\u0000\u0000\u0000" +
+        " !\"#\$%&'()*+,-./" +
+        "0123456789:;<=>?" +
+        "@ABCDEFGHIJKLMNO" +
+        "PQRSTUVWXYZ[\\]^_" +
+        "`abcdefghijklmno" +
+        "pqrstuvwxyz{|}~\u0000" +
+        "ÇüéâäàåçêëèïîìÄÅ" +
+        "ÉæÆôöòûùÿÖÜø£Ø×ƒ" +
+        "áíóúñÑªº¿®¬½¼¡«»" +
+        "░▒▓│┤╡╢╖╕╣║╗╝╜╛┐" +
+        "└┴┬├─┼╞╟╚╔╩╦╠═╬╧" +
+        "╨╤╥╙╘╒╓╫╪┘┌█▄▌▐▀" +
+        "αβΓπΣσμτΦΘΩδ∞∅∈∩" +
+        "≡±≥≤⌠⌡÷≈°∙·√ⁿ²■\u0000"
+    *///?}
 
     private class Unihex(val rows: IntArray, val left: Int, val right: Int)
 
@@ -61,7 +80,7 @@ internal object McResourceFont {
         }
     }
 
-    private class LegacyUnicode(val sizes: ByteArray, val readPage: (Int) -> PolyBitmap?) {
+    private class LegacyUnicode(val sizes: ByteArray, val boldOffset: Float, val shadow: Float, val readPage: (Int) -> PolyBitmap?) {
         private val pages = ConcurrentHashMap<Int, Optional<PolyBitmap>>()
 
         fun glyph(cp: Int): McGlyph? {
@@ -76,7 +95,7 @@ internal object McResourceFont {
             val y = (cp ushr 4 and 15) * 16
             return McGlyph(
                 page, x / 256f, y / 256f, (x + columns) / 256f, (y + 16) / 256f,
-                0f, columns / 2f, 8f, columns / 2f + 1f, 0.5f,
+                0f, columns / 2f, 8f, (columns / 2 + 1).toFloat(), boldOffset, 1f, shadow,
             )
         }
     }
@@ -166,12 +185,15 @@ internal object McResourceFont {
     }
 
     private fun reload() {
+        //? if = 1.8.9
+        //val renderer = captureRenderer() ?: return
         val options = fontOptions()
         requested = options
         val gen = generation.incrementAndGet()
         //~ if = 1.8.9 'Minecraft.getInstance().resourceManager' -> 'ResourceManager.client()'
         val rm = Minecraft.getInstance().resourceManager
         BackgroundTasks.submit {
+            //~ if = 1.8.9 'load(rm, options)' -> 'loadRendererFont(rm, renderer)'
             val loaded = runCatching { load(rm, options) }.onFailure { LOGGER.warn("Failed to load the game font", it) }.getOrNull()
             RenderThread.schedule(Runnable {
                 if (gen != generation.get()) {
@@ -188,11 +210,11 @@ internal object McResourceFont {
     }
 
     private fun fontOptions(): Int {
-        val options = Minecraft.getInstance().options
         //? if > 1.8.9 {
+        val options = Minecraft.getInstance().options
         return (if (options.forceUnicodeFont().get()) OPTION_UNIFORM else 0) or (if (options.japaneseGlyphVariants().get()) OPTION_JP else 0)
         //?} else {
-        /*return (if (options.forceUnicodeFont) OPTION_UNIFORM else 0) or (if (Locale.getDefault().language.equals("ja", ignoreCase = true)) OPTION_JP else 0)
+        /*return if (Minecraft.getInstance().font?.unicode == true) OPTION_UNIFORM else 0
         *///?}
     }
 
@@ -235,11 +257,59 @@ internal object McResourceFont {
         return if (layers.isEmpty()) null else Font(layers)
     }
 
+    //? if = 1.8.9 {
+    /*private class RendererState(val sheet: String, val advances: FloatArray, val unicode: Boolean, val argentum: Boolean)
+
+    private fun captureRenderer(): RendererState? {
+        val renderer = Minecraft.getInstance().font ?: return null
+        val argentum = ArgentumCompat.sheetAdvances(renderer)
+        val advances = argentum ?: FloatArray(SHEET_CHARS.length) { renderer.getWidth(SHEET_CHARS[it]).toFloat() }
+        return RendererState(renderer.fontLocation.toString(), advances, renderer.unicode, argentum != null)
+    }
+
+    private fun loadRendererFont(rm: ResourceManager, renderer: RendererState): Font {
+        val glyphs = HashMap<Int, McGlyph>()
+        glyphs[' '.code] = McGlyph(null, 0f, 0f, 0f, 0f, 0f, 0f, 0f, renderer.advances[SHEET_CHARS.indexOf(' ')], 1f)
+        if (!renderer.unicode) loadRendererSheet(rm, renderer, glyphs)
+        val layers = arrayListOf(Layer(glyphs, emptyMap()))
+        val vanillaWhole = !renderer.argentum && !renderer.unicode
+        loadLegacyUnicode(rm, "minecraft:font/glyph_sizes.bin", "minecraft:font/unicode_page_%s.png", if (vanillaWhole) 1f else 0.5f, if (vanillaWhole) 0f else 0.5f)
+            ?.let { layers += Layer(emptyMap(), emptyMap(), legacy = it) }
+        return Font(layers)
+    }
+
+    private fun loadRendererSheet(rm: ResourceManager, renderer: RendererState, out: MutableMap<Int, McGlyph>) {
+        val image = read(rm, renderer.sheet, "")?.let(PolyBitmap::decode) ?: return
+        val cellW = image.width / 16
+        val cellH = image.height / 16
+        if (cellW == 0 || cellH == 0) return
+        val sheet = spaced(image, 16, 16, cellW, cellH)
+        for ((slot, char) in SHEET_CHARS.withIndex()) {
+            if (char == '\u0000' || char == ' ') continue
+            val advance = renderer.advances[slot]
+            val drawn = (advance - 1f).coerceIn(0f, 8f)
+            val x = slot % 16 * cellW
+            val y = slot / 16 * cellH
+            val inked = drawn > 0f && (y until y + cellH).any { py -> (x until x + cellW).any { px -> image.pixels[(py * image.width + px) * 4 + 3].toInt() != 0 } }
+            val sx = slot % 16 * (cellW + 2) + 1
+            val sy = slot / 16 * (cellH + 2) + 1
+            out[char.code] = McGlyph(
+                sheet.takeIf { inked }, sx / sheet.width.toFloat(), sy / sheet.height.toFloat(), (sx + drawn * cellW / 8f) / sheet.width.toFloat(), (sy + cellH) / sheet.height.toFloat(),
+                0f, drawn, 8f, advance, 1f,
+            )
+        }
+    }
+    *///?}
+
     private fun loadLegacyUnicode(rm: ResourceManager, provider: JsonObject): LegacyUnicode? {
         val sizesPath = provider.get("sizes")?.asString ?: return null
         val template = provider.get("template")?.asString ?: return null
+        return loadLegacyUnicode(rm, sizesPath, template, 0.5f, 0.5f)
+    }
+
+    private fun loadLegacyUnicode(rm: ResourceManager, sizesPath: String, template: String, boldOffset: Float, shadow: Float): LegacyUnicode? {
         val sizes = read(rm, sizesPath, "") ?: return null
-        return LegacyUnicode(sizes) { page ->
+        return LegacyUnicode(sizes, boldOffset, shadow) { page ->
             val path = template.replace("%s", String.format(Locale.ROOT, "%02x", page))
             read(rm, path, "textures/")?.let(PolyBitmap::decode)
         }
