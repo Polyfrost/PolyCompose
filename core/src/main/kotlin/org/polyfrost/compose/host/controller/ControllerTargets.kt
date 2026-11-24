@@ -5,6 +5,7 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusEventModifierNode
 import androidx.compose.ui.focus.FocusState
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.node.CompositionLocalConsumerModifierNode
 import androidx.compose.ui.node.ModifierNodeElement
 import androidx.compose.ui.node.TraversableNode
@@ -24,6 +25,8 @@ public class ControllerTargets {
     private val nodes = ArrayList<ControllerActionNode>()
 
     private var focusClock = 0L
+
+    public var focusInside: ((Rect) -> Boolean)? = null
 
     internal fun add(node: ControllerActionNode) {
         nodes += node

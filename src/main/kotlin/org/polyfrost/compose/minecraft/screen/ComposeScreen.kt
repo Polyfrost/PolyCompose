@@ -1361,7 +1361,16 @@ abstract class ComposeScreen(
         }
     }
 
-    internal val actionTargets = ControllerTargets()
+    internal val actionTargets = ControllerTargets().also { targets ->
+        targets.focusInside = { area ->
+            val moved = controllerSemantics?.focusFirstIn(area) == true
+            if (moved) {
+                controllerFocusVisible = true
+                sceneDirty = true
+            }
+            moved
+        }
+    }
 
     internal fun controllerHints(): List<ControllerHint> = if (liveScene() == null) emptyList() else actionTargets.hints()
 

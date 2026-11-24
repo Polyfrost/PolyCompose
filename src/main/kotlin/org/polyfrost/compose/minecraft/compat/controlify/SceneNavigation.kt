@@ -96,6 +96,20 @@ internal class SceneSemantics {
         return false
     }
 
+    fun focusFirstIn(area: Rect): Boolean {
+        for (owner in owners.toList().asReversed()) {
+            val inside = owner.getAllSemanticsNodes(mergingEnabled = false)
+                .filter { SemanticsActions.RequestFocus in it.config }
+                .filter { val b = it.boundsInWindow; b.width > 0f && b.height > 0f && area.contains(b.center) }
+                .sortedWith(compareBy({ it.boundsInWindow.top }, { it.boundsInWindow.left }))
+            for (node in inside.take(MAX_FOCUS_ATTEMPTS)) {
+                val action = node.config.getOrNull(SemanticsActions.RequestFocus)?.action ?: continue
+                if (action()) return true
+            }
+        }
+        return false
+    }
+
     fun focusAt(owner: SemanticsOwner, at: Rect): Boolean {
         for (node in owner.getAllSemanticsNodes(mergingEnabled = false)) {
             if (SemanticsActions.RequestFocus !in node.config) continue
