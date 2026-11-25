@@ -867,6 +867,103 @@ class PolyTessellatorTest {
     }
 
     @Test
+    fun offPixelMcGlyphsUseNearestAtNativeScale() {
+        val sheet = PolyBitmap(16, 16, ByteArray(16 * 16 * 4) { -1 })
+        val glyph = McGlyph(sheet, 1f / 16f, 1f / 16f, 5.5f / 16f, 9f / 16f, 0f, 4.5f, 8f, 5.5f, 1f)
+        val sliver = McGlyph(sheet, 1f / 16f, 1f / 16f, 1.25f / 16f, 9f / 16f, 0f, 0.25f, 8f, 1.25f, 1f)
+        val source = McGlyphs.source
+        try {
+            fun nearestAt(g: McGlyph, scale: Float): Boolean {
+                McGlyphs.source = { g }
+                return GlyphRecorder().run {
+                    scale(scale, scale)
+                    mcText("a", 0f, 0f, -1, false, 1f)
+                    done()
+                }.single()
+            }
+            assertTrue(nearestAt(glyph, 1f), "native scale")
+            assertTrue(nearestAt(glyph, 2f), "upscaled")
+            assertFalse(nearestAt(glyph, 0.99f), "downscaled")
+            assertTrue(nearestAt(sliver, 0.5f), "narrower than a pixel")
+        } finally {
+            McGlyphs.source = source
+        }
+    }
+
+    @Test
+    fun obfuscatedMcTextKeepsItsLayout() {
+        val sheet = PolyBitmap(16, 16, ByteArray(16 * 16 * 4) { -1 })
+        val glyph = McGlyph(sheet, 0f, 0f, 0.25f, 0.5f, 0f, 4f, 8f, 6f, 1f, 2f, 1.5f)
+        val standIn = McGlyph(sheet, 0.5f, 0f, 0.75f, 0.5f, 0f, 4f, 8f, 3f, 0.5f, 0.5f, 0.25f)
+        val source = McGlyphs.source
+        val obfuscate = McGlyphs.obfuscate
+        val swapped = ArrayList<Int>()
+        McGlyphs.source = { cp -> if (cp == 'x'.code) standIn else glyph }
+        McGlyphs.obfuscate = null
+        fun drawn(text: String) = GlyphRecorder().run {
+            mcText(text, 0f, 0f, -1, true, 1f)
+            done()
+            verts.flatMap { it.asList() }
+        }
+        fun positions(verts: List<Float>) = verts.filterIndexed { i, _ -> i % 4 < 2 }
+        try {
+            val plain = drawn("a§lbc§rd")
+            McGlyphs.obfuscate = { cp -> swapped += cp; 'x'.code }
+            val obfuscated = drawn("a§l§kbc§rd")
+            assertEquals(positions(plain), positions(obfuscated))
+            assertEquals(listOf('b'.code, 'c'.code), swapped)
+            // a, b, bold b, c, bold c and d, for the shadow and then the fill
+            val perGlyph = obfuscated.size / 12
+            val inks = List(12) { if (obfuscated[it * perGlyph + 2] > obfuscated[2] + 1e-4f) "standIn" else "glyph" }
+            val pass = listOf("glyph", "standIn", "standIn", "standIn", "standIn", "glyph")
+            assertEquals(pass + pass, inks)
+        } finally {
+            McGlyphs.source = source
+            McGlyphs.obfuscate = obfuscate
+        }
+    }
+
+    @Test
+    fun obfuscatedMcOutlineFollowsItsStandIns() {
+        val face = object : PolyGlyphPage.Face {
+            override fun glyph(codepoint: Int) = 1
+            override fun advance(glyph: Int) = 0.2f
+            override fun raster(glyph: Int, pixelSize: Float) = PolyGlyphPage.Raster(0, -4, 2, 4, ByteArray(8) { -1 })
+        }
+        val sheet = PolyBitmap(16, 16, ByteArray(16 * 16 * 4) { -1 })
+        val glyph = McGlyph(sheet, 0f, 0f, 0.125f, 0.5f, 0f, 2f, 8f, 6f, 1f)
+        val standIn = McGlyph(sheet, 0f, 0f, 0.25f, 0.5f, 0f, 4f, 8f, 6f, 1f)
+        val rasterizer = PolyGlyphPage.rasterizer
+        val source = McGlyphs.source
+        val obfuscate = McGlyphs.obfuscate
+        val swapped = ArrayList<Int>()
+        PolyGlyphPage.rasterizer = object : PolyGlyphPage.Rasterizer { override fun face(name: String) = face.takeIf { name == "minecraft" } }
+        McGlyphs.source = { cp -> if (cp == 'x'.code) standIn else glyph }
+        McGlyphs.obfuscate = null
+        fun drawn(text: String) = GlyphRecorder().run {
+            mcTextOutline(text, 0f, 0f, -1, 0x40000000, 1f)
+            done()
+            verts.flatMap { it.asList() }
+        }
+        try {
+            val expected = drawn("axx")
+            val fill = GlyphRecorder().run {
+                mcText("axx", 0f, 0f, -1, false, 1f)
+                done()
+                verts.sumOf { it.size }
+            }
+            assertTrue(expected.size > fill, "outline drawn")
+            McGlyphs.obfuscate = { cp -> swapped += cp; 'x'.code }
+            assertEquals(expected, drawn("a§kbc"))
+            assertEquals(listOf('b'.code, 'c'.code), swapped)
+        } finally {
+            PolyGlyphPage.rasterizer = rasterizer
+            McGlyphs.source = source
+            McGlyphs.obfuscate = obfuscate
+        }
+    }
+
+    @Test
     fun nearestMcGlyphsStartOnWholePixelsAndKeepTheirScale() {
         val sheet = PolyBitmap(16, 16, ByteArray(16 * 16 * 4) { -1 })
         val glyph = McGlyph(sheet, 0f, 0f, 0.5f, 0.5f, 0f, 8f, 8f, 8f, 1f)

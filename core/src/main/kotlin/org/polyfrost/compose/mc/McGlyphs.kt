@@ -20,6 +20,8 @@ public class McGlyph @JvmOverloads constructor(
     private val pixelY = bitmap?.let { (v0 * it.height).roundToInt() } ?: 0
     internal val pixelWidth = bitmap?.let { (u1 * it.width).roundToInt() - pixelX } ?: 0
     internal val pixelHeight = bitmap?.let { (v1 * it.height).roundToInt() - pixelY } ?: 0
+    internal val texelWidth = bitmap?.let { (u1 - u0) * it.width } ?: 0f
+    internal val texelHeight = bitmap?.let { (v1 - v0) * it.height } ?: 0f
 
     internal val linearBitmap: PolyBitmap? by lazy {
         val b = bitmap ?: return@lazy null
@@ -48,6 +50,11 @@ public object McGlyphs {
     @JvmStatic
     @Volatile
     public var source: ((codepoint: Int) -> McGlyph?)? = null
+
+    /** Picks a random stand-in of the same width for a codepoint in §k text; without it §k text is drawn as is. */
+    @JvmStatic
+    @Volatile
+    public var obfuscate: ((codepoint: Int) -> Int)? = null
 
     /** Width of [text], honoring § formatting codes, as the tessellator draws it. */
     @JvmStatic

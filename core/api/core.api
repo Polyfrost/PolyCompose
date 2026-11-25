@@ -1081,7 +1081,9 @@ public final class org/polyfrost/compose/mc/McGlyph {
 public final class org/polyfrost/compose/mc/McGlyphs {
 	public static final field $stable I
 	public static final field INSTANCE Lorg/polyfrost/compose/mc/McGlyphs;
+	public static final fun getObfuscate ()Lkotlin/jvm/functions/Function1;
 	public static final fun getSource ()Lkotlin/jvm/functions/Function1;
+	public static final fun setObfuscate (Lkotlin/jvm/functions/Function1;)V
 	public static final fun setSource (Lkotlin/jvm/functions/Function1;)V
 	public static final fun width (Ljava/lang/String;F)F
 	public static final fun width (Ljava/lang/String;FZ)F
@@ -2687,6 +2689,7 @@ public abstract class org/polyfrost/compose/render/PolyTessellator : org/polyfro
 	public fun mcText (Ljava/lang/String;FFIZF)V
 	public fun mcText (Ljava/lang/String;FFIZFZ)V
 	public fun mcText (Ljava/lang/String;FFIZFZZ)V
+	protected fun mcTextAnimated (FFFFLkotlin/jvm/functions/Function1;)V
 	public fun mcTextLive (Ljava/lang/String;FFLjava/util/function/IntSupplier;ZFZ)V
 	public fun mcTextLive (Ljava/lang/String;FFLkotlin/jvm/functions/Function0;ZF)V
 	public fun mcTextLive (Ljava/lang/String;FFLkotlin/jvm/functions/Function0;ZFZ)V

@@ -5,9 +5,11 @@ import java.io.ByteArrayInputStream
 import java.util.Locale
 import java.util.Optional
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.ThreadLocalRandom
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.zip.ZipInputStream
 import kotlin.jvm.optionals.getOrNull
+import kotlin.math.ceil
 import net.minecraft.client.Minecraft
 import net.minecraft.server.packs.resources.ResourceManager
 import org.polyfrost.compose.mc.McFontQueue
@@ -26,7 +28,7 @@ import org.slf4j.LoggerFactory
 import net.minecraft.resources.Identifier
 //?} else {
 /*import net.ornithemc.osl.core.api.util.NamespacedIdentifiers
-import org.polyfrost.compose.minecraft.compat.ArgentumCompat
+import org.polyfrost.compose.minecraft.compat.ArgentumGlyphs
 *///?}
 
 internal object McResourceFont {
@@ -65,10 +67,12 @@ internal object McResourceFont {
         val unihex: Map<Int, Unihex>,
         val ttf: Ttf? = null,
         val legacy: LegacyUnicode? = null,
+        val lookup: ((Int) -> McGlyph?)? = null,
     ) {
         private val baked = ConcurrentHashMap<Int, McGlyph>()
 
         fun glyph(cp: Int): McGlyph? {
+            if (lookup != null) return lookup(cp)
             if (ttf != null) return ttf.glyph(cp)
             if (legacy != null) return baked[cp] ?: legacy.glyph(cp)?.let { baked.putIfAbsent(cp, it) ?: it }
             glyphs[cp]?.let { return it }
@@ -148,10 +152,24 @@ internal object McResourceFont {
         }
     }
 
-    private class Font(private val layers: List<Layer>) {
+    private class Font(private val layers: List<Layer>, private val obfuscatable: IntArray? = null, private val obfuscator: ((Int) -> Int)? = null) {
+        private val byWidth: Map<Int, IntArray> by lazy {
+            val codepoints = obfuscatable?.asList() ?: layers.flatMap { it.glyphs.keys }.filter { it != ' '.code }.distinct()
+            codepoints.groupBy { glyph(it)?.let { g -> ceil(g.advance).toInt() } ?: -1 }.filterKeys { it >= 0 }.mapValues { it.value.sorted().toIntArray() }
+        }
+
         fun glyph(cp: Int): McGlyph? {
             for (i in layers.indices) layers[i].glyph(cp)?.let { return it }
             return null
+        }
+
+        fun obfuscate(cp: Int): Int {
+            obfuscator?.let { return it(cp) }
+            if (obfuscatable == null && cp == ' '.code) return cp
+            val advance = glyph(cp)?.advance ?: return cp
+            val bucket = byWidth[ceil(advance).toInt()] ?: return cp
+            if (obfuscatable != null && bucket.binarySearch(cp) < 0) return cp
+            return bucket[ThreadLocalRandom.current().nextInt(bucket.size)]
         }
 
         fun close() {
@@ -166,6 +184,7 @@ internal object McResourceFont {
 
     fun init() {
         McGlyphs.source = { cp -> font?.glyph(cp) }
+        McGlyphs.obfuscate = { cp -> font?.obfuscate(cp) ?: cp }
         McFontQueue.measureWidth = McGlyphs::width
         McFontQueue.measureLiteralWidth = { text, scale -> McGlyphs.width(text, scale, true) }
         HostEvents.onResourcesReloaded(::reload)
@@ -175,6 +194,7 @@ internal object McResourceFont {
 
     fun initGlyphs() {
         McGlyphs.source = { cp -> font?.glyph(cp) ?: demand() }
+        McGlyphs.obfuscate = { cp -> font?.obfuscate(cp) ?: cp }
         HostEvents.onResourcesReloaded { if (wanted) reload() }
         HostEvents.onClientTick { if (wanted && requested != fontOptions()) reload() }
     }
@@ -258,24 +278,24 @@ internal object McResourceFont {
     }
 
     //? if = 1.8.9 {
-    /*private class RendererState(val sheet: String, val advances: FloatArray, val unicode: Boolean, val argentum: Boolean)
+    /*private class RendererState(val sheet: String, val advances: FloatArray, val unicode: Boolean, val argentum: ArgentumGlyphs.Source?)
 
     private fun captureRenderer(): RendererState? {
         val renderer = Minecraft.getInstance().font ?: return null
-        val argentum = ArgentumCompat.sheetAdvances(renderer)
-        val advances = argentum ?: FloatArray(SHEET_CHARS.length) { renderer.getWidth(SHEET_CHARS[it]).toFloat() }
-        return RendererState(renderer.fontLocation.toString(), advances, renderer.unicode, argentum != null)
+        val argentum = if (ArgentumGlyphs.available) ArgentumGlyphs.Source(renderer) else null
+        val advances = FloatArray(SHEET_CHARS.length) { renderer.getWidth(SHEET_CHARS[it]).toFloat() }
+        return RendererState(renderer.fontLocation.toString(), advances, renderer.unicode, argentum)
     }
 
     private fun loadRendererFont(rm: ResourceManager, renderer: RendererState): Font {
+        renderer.argentum?.let { return Font(listOf(Layer(emptyMap(), emptyMap(), lookup = it::glyph)), obfuscator = it::obfuscate) }
         val glyphs = HashMap<Int, McGlyph>()
         glyphs[' '.code] = McGlyph(null, 0f, 0f, 0f, 0f, 0f, 0f, 0f, renderer.advances[SHEET_CHARS.indexOf(' ')], 1f)
         if (!renderer.unicode) loadRendererSheet(rm, renderer, glyphs)
         val layers = arrayListOf(Layer(glyphs, emptyMap()))
-        val vanillaWhole = !renderer.argentum && !renderer.unicode
-        loadLegacyUnicode(rm, "minecraft:font/glyph_sizes.bin", "minecraft:font/unicode_page_%s.png", if (vanillaWhole) 1f else 0.5f, if (vanillaWhole) 0f else 0.5f)
+        loadLegacyUnicode(rm, "minecraft:font/glyph_sizes.bin", "minecraft:font/unicode_page_%s.png", if (renderer.unicode) 0.5f else 1f, if (renderer.unicode) 0.5f else 0f)
             ?.let { layers += Layer(emptyMap(), emptyMap(), legacy = it) }
-        return Font(layers)
+        return Font(layers, SHEET_CHARS.codePoints().filter { it != 0 }.toArray())
     }
 
     private fun loadRendererSheet(rm: ResourceManager, renderer: RendererState, out: MutableMap<Int, McGlyph>) {
