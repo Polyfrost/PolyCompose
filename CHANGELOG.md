@@ -3,6 +3,7 @@
 ## [Unreleased]
 
 - Fixed the game drawing the wrong texture on 1.21.1-1.21.10 after a skin loaded during PolyCompose drawing
+- Fixed CJK, symbols and Force Unicode Font text on 1.21.1-1.21.5 not using the game's unicode font
 
 ## [3.0.9]
 

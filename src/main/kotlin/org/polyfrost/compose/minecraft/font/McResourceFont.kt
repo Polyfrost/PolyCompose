@@ -359,7 +359,7 @@ internal object McResourceFont {
         val stack = runCatching { rm.getResourceStack(id(ref, "font/", ".json")) }.getOrDefault(emptyList())
         // vanilla lets the highest-priority pack's providers go first
         for (resource in stack.asReversed()) {
-            val root = runCatching { resource.open().use { HostJson.parseOrNull(String(it.readAllBytes(), Charsets.UTF_8)) } }.getOrNull()
+            val root = runCatching { resource.open().use { HostJson.parse(String(it.readAllBytes(), Charsets.UTF_8)) } }.getOrNull()
             val providers = (root as? JsonObject)?.getAsJsonArray("providers") ?: continue
             for (element in providers) {
                 val provider = element as? JsonObject ?: continue
