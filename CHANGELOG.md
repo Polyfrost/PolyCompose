@@ -1,5 +1,9 @@
 # Changelog
 
+## [Unreleased]
+
+- Fixed the game drawing the wrong texture on 1.21.1-1.21.10 after a skin loaded during PolyCompose drawing
+
 ## [3.0.9]
 
 - Fixed enchanted item icons on 1.21.11 and newer being drawn by the game's item renderer instead of the icon atlas, which has PolyCompose's own glint
