@@ -165,6 +165,7 @@ internal object McResourceFont {
 
         fun obfuscate(cp: Int): Int {
             obfuscator?.let { return it(cp) }
+            if (obfuscatable == null && cp == ' '.code) return cp
             val advance = glyph(cp)?.advance ?: return cp
             val bucket = byWidth[ceil(advance).toInt()] ?: return cp
             if (obfuscatable != null && bucket.binarySearch(cp) < 0) return cp

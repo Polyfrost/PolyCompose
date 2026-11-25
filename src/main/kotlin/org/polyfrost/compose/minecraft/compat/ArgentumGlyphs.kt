@@ -5,38 +5,52 @@ package org.polyfrost.compose.minecraft.compat
 import dev.rdh.argentum.api.render.text.TextGlyphs
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ThreadLocalRandom
+import java.util.concurrent.atomic.AtomicBoolean
 import net.minecraft.client.render.TextRenderer
-import org.polyfrost.compose.host.HostErrors
 import org.polyfrost.compose.mc.McGlyph
 import org.polyfrost.compose.minecraft.platform.LoadedMods
 import org.polyfrost.compose.minecraft.platform.RenderThread
+import org.polyfrost.compose.render.FontManager
 import org.polyfrost.compose.render.PolyBitmap
 
 object ArgentumGlyphs {
     val available: Boolean by lazy {
-        LoadedMods.isLoaded("argentum") &&
+        LoadedMods.isLoaded("argentum") && !"true".equals(System.getProperty("argentum.vanillaText"), ignoreCase = true) &&
             runCatching { Class.forName("dev.rdh.argentum.api.render.text.TextGlyphs", false, ArgentumGlyphs::class.java.classLoader) }.isSuccess
     }
 
     private val MISSING = McGlyph(null, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f)
 
-    @Volatile private var warned = false
-
     // Argentum loads its fonts lazily and isn't thread-safe, so glyphs are only resolved on the render thread
     class Source(private val renderer: TextRenderer) {
         private val glyphs = ConcurrentHashMap<Int, McGlyph>()
+        private val pending = ConcurrentHashMap.newKeySet<Int>()
+        private val scheduled = AtomicBoolean()
 
         fun glyph(cp: Int): McGlyph? {
             glyphs[cp]?.let { return it.takeIf { it !== MISSING } }
-            if (!RenderThread.isCurrent()) {
-                if (!warned) {
-                    warned = true
-                    HostErrors.warn("A Minecraft-font glyph was looked up off the render thread; it falls back to the bundled font", IllegalStateException("Called from thread ${Thread.currentThread().name}"))
-                }
-                return null
+            if (RenderThread.isCurrent()) return resolve(cp).takeIf { it !== MISSING }
+            pending.add(cp)
+            if (scheduled.compareAndSet(false, true)) RenderThread.execute(::drain)
+            return null
+        }
+
+        private fun drain() {
+            scheduled.set(false)
+            var resolved = false
+            val it = pending.iterator()
+            while (it.hasNext()) {
+                val cp = it.next()
+                it.remove()
+                resolve(cp)
+                resolved = true
             }
+            if (resolved) FontManager.invalidateMetrics()
+        }
+
+        private fun resolve(cp: Int): McGlyph {
             val g = TextGlyphs.glyph(renderer, cp)?.let(::convert) ?: MISSING
-            return (glyphs.putIfAbsent(cp, g) ?: g).takeIf { it !== MISSING }
+            return glyphs.putIfAbsent(cp, g) ?: g
         }
 
         fun obfuscate(cp: Int): Int = if (RenderThread.isCurrent()) TextGlyphs.obfuscate(renderer, cp, ThreadLocalRandom.current()) else cp
