@@ -61,7 +61,7 @@ class GlRenderer private constructor(private val inLive: Boolean) : PolyTessella
     private val batches = ArrayList<GlProgram.Batch>()
 
     private class Live(
-        val at: Int, val state: State, val draw: (PolyRenderer) -> Unit, val key: IntSupplier? = null, val box: FloatArray? = null,
+        val at: Int, val state: State, val blend: Int, val draw: (PolyRenderer) -> Unit, val key: IntSupplier? = null, val box: FloatArray? = null,
         private val memo: Memo = Memo(),
     ) {
         class Memo {
@@ -69,7 +69,7 @@ class GlRenderer private constructor(private val inLive: Boolean) : PolyTessella
             var out: List<GlProgram.Batch>? = null
         }
 
-        fun moved(at: Int) = Live(at, state, draw, key, box, memo)
+        fun moved(at: Int) = Live(at, state, blend, draw, key, box, memo)
 
         val stamp: Int get() = memo.key
 
@@ -327,7 +327,7 @@ class GlRenderer private constructor(private val inLive: Boolean) : PolyTessella
         for (i in m[0] until batches.size) batches[i] = batches[i].faded(alpha)
         for (i in m[1] until lives.size) {
             val l = lives[i]
-            lives[i] = Live(l.at, l.state.copy().also { it.alpha *= alpha }, l.draw, l.key, l.box)
+            lives[i] = Live(l.at, l.state.copy().also { it.alpha *= alpha }, l.blend, l.draw, l.key, l.box)
         }
         return true
     }
@@ -337,7 +337,7 @@ class GlRenderer private constructor(private val inLive: Boolean) : PolyTessella
         flush()
         beginDraw()
         touchAll()
-        lives.add(Live(batches.size, state.copy(), draw))
+        lives.add(Live(batches.size, state.copy(), blendMode, draw))
     }
 
     override fun live(x: Float, y: Float, w: Float, h: Float, key: () -> Int, draw: (PolyRenderer) -> Unit) {
@@ -361,7 +361,7 @@ class GlRenderer private constructor(private val inLive: Boolean) : PolyTessella
         extend(box, m, x1, y1)
         extend(box, m, x0, y1)
         touch(box[0], box[1], box[2], box[3])
-        lives.add(Live(batches.size, s.copy(), draw, key, box))
+        lives.add(Live(batches.size, s.copy(), blendMode, draw, key, box))
     }
 
     override fun mcTextLive(text: String, x: Float, y: Float, color: () -> Int, shadow: Boolean, scale: Float, literal: Boolean) {
@@ -391,7 +391,7 @@ class GlRenderer private constructor(private val inLive: Boolean) : PolyTessella
         if (box[0] > box[2]) return live(draw)
         beginDraw()
         touch(box[0], box[1], box[2], box[3])
-        lives.add(Live(batches.size, state.copy(), draw, key, box))
+        lives.add(Live(batches.size, state.copy(), blendMode, draw, key, box))
     }
 
     override fun mcTextLive(text: String, x: Float, y: Float, color: () -> Int, shadow: Boolean, scale: Float) {
@@ -415,7 +415,7 @@ class GlRenderer private constructor(private val inLive: Boolean) : PolyTessella
             val vx = b.verts[i * 4]; val vy = b.verts[i * 4 + 1]
             box[0] = min(box[0], vx); box[1] = min(box[1], vy); box[2] = max(box[2], vx); box[3] = max(box[3], vy)
         }
-        lives.add(Live(batches.size, state.copy(), { r ->
+        lives.add(Live(batches.size, state.copy(), blendMode, { r ->
             val alpha = (r as GlRenderer).state.alpha
             val c = mulAlpha(color.asInt, alpha)
             if (c ushr 24 != 0) {
@@ -573,6 +573,7 @@ class GlRenderer private constructor(private val inLive: Boolean) : PolyTessella
             }
             reset()
             state = l.state.copy()
+            blend(l.blend)
             transient = l.key == null
             try {
                 l.draw(this)
