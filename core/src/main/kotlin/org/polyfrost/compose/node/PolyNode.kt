@@ -100,8 +100,6 @@ public open class PolyNode {
             val r = s.radius
             if (r > 0f) ctx.clipRRect(x, y, width, height, r) else ctx.clipRect(x, y, width, height)
         }
-        renderContent(ctx)
-        val kids = children
         val scaled = contentScale != 1f
         if (scaled) {
             val px = x + s.padding.left
@@ -111,6 +109,8 @@ public open class PolyNode {
             ctx.scale(contentScale, contentScale)
             ctx.translate(-px, -py)
         }
+        renderContent(ctx)
+        val kids = children
         for (i in kids.indices) {
             val child = kids[i]
             val cs = child.style

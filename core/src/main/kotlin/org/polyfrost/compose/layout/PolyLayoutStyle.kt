@@ -14,13 +14,13 @@ public class PolyLayoutStyle {
     public var height: PolySize = PolySize.Wrap
         set(value) { if (field != value) { beforeLayoutChange(); field = value } }
     public var minWidth: Float = Float.NaN
-        set(value) { if (field != value) { beforeLayoutChange(); field = value } }
+        set(value) { if (!field.equals(value)) { beforeLayoutChange(); field = value } }
     public var maxWidth: Float = Float.NaN
-        set(value) { if (field != value) { beforeLayoutChange(); field = value } }
+        set(value) { if (!field.equals(value)) { beforeLayoutChange(); field = value } }
     public var minHeight: Float = Float.NaN
-        set(value) { if (field != value) { beforeLayoutChange(); field = value } }
+        set(value) { if (!field.equals(value)) { beforeLayoutChange(); field = value } }
     public var maxHeight: Float = Float.NaN
-        set(value) { if (field != value) { beforeLayoutChange(); field = value } }
+        set(value) { if (!field.equals(value)) { beforeLayoutChange(); field = value } }
     public var fitContent: Boolean = false
         set(value) { if (field != value) { beforeLayoutChange(); field = value } }
     public var align: PolyAlign = PolyAlign.TopLeft
@@ -87,8 +87,8 @@ public class PolyLayoutStyle {
     }
 
     internal fun layoutDiffers(): Boolean =
-        laidWidth != width || laidHeight != height || laidMinWidth != minWidth || laidMaxWidth != maxWidth ||
-            laidMinHeight != minHeight || laidMaxHeight != maxHeight || laidFitContent != fitContent || laidAlign != align || laidPadding != padding ||
+        laidWidth != width || laidHeight != height || !laidMinWidth.equals(minWidth) || !laidMaxWidth.equals(maxWidth) ||
+            !laidMinHeight.equals(minHeight) || !laidMaxHeight.equals(maxHeight) || laidFitContent != fitContent || laidAlign != align || laidPadding != padding ||
             laidMargin != margin || laidPositionMode != positionMode || laidX != x || laidY != y ||
             laidGap != gap || laidLayoutType != layoutType
 }

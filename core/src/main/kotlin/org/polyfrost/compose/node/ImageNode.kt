@@ -23,6 +23,9 @@ public class ImageNode(
 
     override fun renderContent(ctx: RenderContext) {
         val pad = style.padding
-        ctx.image(image, x + pad.left, y + pad.top, (width - pad.horizontal).coerceAtLeast(0f), (height - pad.vertical).coerceAtLeast(0f))
+        val natural = style.fitContent
+        val w = if (natural) intrinsicWidth else (width - pad.horizontal).coerceAtLeast(0f)
+        val h = if (natural) intrinsicHeight else (height - pad.vertical).coerceAtLeast(0f)
+        ctx.image(image, x + pad.left, y + pad.top, w, h)
     }
 }

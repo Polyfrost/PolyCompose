@@ -17,16 +17,8 @@ public object PolyLayoutEngine {
 
         val wrapWidth = style.width === PolySize.Wrap && node.intrinsicWidth < 0f
         val wrapHeight = style.height === PolySize.Wrap && node.intrinsicHeight < 0f
-        var naturalW = 0f
-        var naturalH = 0f
-        if (!wrapWidth) {
-            naturalW = resolveSize(style.width, parentWidth, node, horizontal = true)
-            node.width = naturalW.constrained(style.minWidth, style.maxWidth)
-        }
-        if (!wrapHeight) {
-            naturalH = resolveSize(style.height, parentHeight, node, horizontal = false)
-            node.height = naturalH.constrained(style.minHeight, style.maxHeight)
-        }
+        if (!wrapWidth) node.width = resolveSize(style.width, parentWidth, node, horizontal = true).constrained(style.minWidth, style.maxWidth)
+        if (!wrapHeight) node.height = resolveSize(style.height, parentHeight, node, horizontal = false).constrained(style.minHeight, style.maxHeight)
 
         val padH = style.padding.horizontal
         val padV = style.padding.vertical
@@ -34,46 +26,35 @@ public object PolyLayoutEngine {
         val provisionalH = ((if (wrapHeight) parentHeight else node.height) - padV).coerceAtLeast(0f)
         for (i in children.indices) measure(children[i], provisionalW, provisionalH)
 
-        if (!wrapWidth && !wrapHeight) {
-            node.contentScale = if (style.fitContent) fitScale(node, naturalW, naturalH) else 1f
-            return
-        }
-        if (wrapWidth) {
-            naturalW = resolveSize(PolySize.Wrap, parentWidth, node, horizontal = true)
-            node.width = naturalW.constrained(style.minWidth, style.maxWidth)
-        }
-        if (wrapHeight) {
-            naturalH = resolveSize(PolySize.Wrap, parentHeight, node, horizontal = false)
-            node.height = naturalH.constrained(style.minHeight, style.maxHeight)
-        }
-
-        val finalW = (node.width - padH).coerceAtLeast(0f)
-        val finalH = (node.height - padV).coerceAtLeast(0f)
-        if (finalW != provisionalW || finalH != provisionalH) {
-            for (i in children.indices) {
-                val child = children[i]
-                val cw = child.style.width
-                val ch = child.style.height
-                val fillW = wrapWidth && (cw === PolySize.Fill || cw is PolySize.Percent)
-                val fillH = wrapHeight && (ch === PolySize.Fill || ch is PolySize.Percent)
-                if (fillW || fillH) measure(child, finalW, finalH)
-            }
-            if (wrapWidth) {
-                naturalW = resolveSize(PolySize.Wrap, parentWidth, node, horizontal = true)
-                node.width = naturalW.constrained(style.minWidth, style.maxWidth)
-            }
-            if (wrapHeight) {
-                naturalH = resolveSize(PolySize.Wrap, parentHeight, node, horizontal = false)
-                node.height = naturalH.constrained(style.minHeight, style.maxHeight)
+        if (wrapWidth || wrapHeight) {
+            resolveWrap(node, wrapWidth, wrapHeight, parentWidth, parentHeight)
+            val finalW = (node.width - padH).coerceAtLeast(0f)
+            val finalH = (node.height - padV).coerceAtLeast(0f)
+            if (finalW != provisionalW || finalH != provisionalH) {
+                for (i in children.indices) {
+                    val child = children[i]
+                    val cw = child.style.width
+                    val ch = child.style.height
+                    val fillW = wrapWidth && (cw === PolySize.Fill || cw is PolySize.Percent)
+                    val fillH = wrapHeight && (ch === PolySize.Fill || ch is PolySize.Percent)
+                    if (fillW || fillH) measure(child, finalW, finalH)
+                }
+                resolveWrap(node, wrapWidth, wrapHeight, parentWidth, parentHeight)
             }
         }
-        node.contentScale = if (style.fitContent) fitScale(node, naturalW, naturalH) else 1f
+        node.contentScale = if (style.fitContent) fitScale(node, parentWidth, parentHeight) else 1f
     }
 
-    private fun fitScale(node: PolyNode, naturalWidth: Float, naturalHeight: Float): Float {
+    private fun resolveWrap(node: PolyNode, wrapWidth: Boolean, wrapHeight: Boolean, parentWidth: Float, parentHeight: Float) {
+        val style = node.style
+        if (wrapWidth) node.width = resolveSize(PolySize.Wrap, parentWidth, node, horizontal = true).constrained(style.minWidth, style.maxWidth)
+        if (wrapHeight) node.height = resolveSize(PolySize.Wrap, parentHeight, node, horizontal = false).constrained(style.minHeight, style.maxHeight)
+    }
+
+    private fun fitScale(node: PolyNode, parentWidth: Float, parentHeight: Float): Float {
         val padding = node.style.padding
-        val naturalContentWidth = naturalWidth - padding.horizontal
-        val naturalContentHeight = naturalHeight - padding.vertical
+        val naturalContentWidth = resolveSize(PolySize.Wrap, parentWidth, node, horizontal = true) - padding.horizontal
+        val naturalContentHeight = resolveSize(PolySize.Wrap, parentHeight, node, horizontal = false) - padding.vertical
         val contentWidth = (node.width - padding.horizontal).coerceAtLeast(0f)
         val contentHeight = (node.height - padding.vertical).coerceAtLeast(0f)
         var scale = 1f
