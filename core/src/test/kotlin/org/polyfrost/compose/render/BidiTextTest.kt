@@ -31,12 +31,6 @@ class BidiTextTest {
     }
 
     @Test
-    fun defaultRightToLeftParagraph() {
-        assertEquals("abc!", visualOrder("abc!", true))
-        assertEquals("?!", visualOrder("!?", true))
-    }
-
-    @Test
     fun minecraftFormattingFollowsItsCharacters() {
         assertSame("§cabc", mcVisualOrder("§cabc", false))
         assertEquals("§r§c§lםול§r§cש§r§c§l", mcVisualOrder("§cש§lלום", false))

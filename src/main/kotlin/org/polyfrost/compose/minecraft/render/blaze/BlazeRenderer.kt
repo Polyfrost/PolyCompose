@@ -1575,7 +1575,7 @@ private object TextWidths {
 }
 
 private fun visualOrder(line: String, literal: Boolean = false): FormattedCharSequence {
-    val visual = mcVisualOrder(line, literal, Language.getInstance().isDefaultRightToLeft)
+    val visual = mcVisualOrder(line, literal)
     if (literal || '§' !in visual) return FormattedCharSequence.forward(visual, Style.EMPTY)
     return FormattedCharSequence { sink -> StringDecomposer.iterateFormatted(visual, Style.EMPTY, sink) }
 }

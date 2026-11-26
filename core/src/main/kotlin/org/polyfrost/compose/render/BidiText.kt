@@ -5,18 +5,24 @@ import org.polyfrost.compose.backend.LIGATURE_PLACEHOLDER
 import java.text.Bidi
 import java.text.BreakIterator
 
-@JvmOverloads
-public fun visualOrder(text: String, defaultRtl: Boolean = false): String {
-    if (!defaultRtl && text.all { it < '\u0590' }) return text
+public fun visualOrder(text: String): String {
+    if (text.all { it < '\u0590' }) return text
+    return VisualCache.get(text, plain = true) { reorder(text) }
+}
+
+private fun reorder(text: String): String {
     val out = StringBuilder(text.length)
-    eachLine(text, out) { start, end -> appendVisualLine(text.substring(start, end), defaultRtl, out, null) }
+    eachLine(text, out) { start, end -> appendVisualLine(text.substring(start, end), out, null) }
     return out.toString()
 }
 
-@JvmOverloads
-public fun mcVisualOrder(text: String, literal: Boolean, defaultRtl: Boolean = false): String {
-    if (literal || '§' !in text) return visualOrder(text, defaultRtl)
-    if (!defaultRtl && text.all { it < '\u0590' }) return text
+public fun mcVisualOrder(text: String, literal: Boolean): String {
+    if (literal || '§' !in text) return visualOrder(text)
+    if (text.all { it < '\u0590' }) return text
+    return VisualCache.get(text, plain = false) { reorderFormatted(text) }
+}
+
+private fun reorderFormatted(text: String): String {
     val out = StringBuilder(text.length + 8)
     val style = McStyle()
     eachLine(text, out) { start, end ->
@@ -33,14 +39,32 @@ public fun mcVisualOrder(text: String, literal: Boolean, defaultRtl: Boolean = f
             styles.add(style.codes())
         }
         val line = plain.toString()
-        if (!needsReorder(line, defaultRtl)) {
+        if (!needsReorder(line)) {
             out.append(text, start, end)
         } else {
-            appendVisualLine(line, defaultRtl, out, styles)
+            appendVisualLine(line, out, styles)
             out.append("§r").append(style.codes())
         }
     }
     return out.toString()
+}
+
+private object VisualCache {
+    private const val MAX = 256
+    private val plain = lru()
+    private val formatted = lru()
+
+    private fun lru() = object : LinkedHashMap<String, String>(64, 0.75f, true) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, String>?) = size > MAX
+    }
+
+    inline fun get(text: String, plain: Boolean, compute: () -> String): String {
+        val map = if (plain) this.plain else formatted
+        synchronized(map) { map[text] }?.let { return it }
+        val visual = compute()
+        synchronized(map) { map[text] = visual }
+        return visual
+    }
 }
 
 internal fun laidOut(text: String): String =
@@ -80,15 +104,15 @@ private inline fun eachLine(text: String, out: StringBuilder, block: (start: Int
     block(start, text.length)
 }
 
-private fun needsReorder(line: String, defaultRtl: Boolean): Boolean =
-    defaultRtl || line.any(::isBidiControl) || Bidi.requiresBidi(line.toCharArray(), 0, line.length)
+private fun needsReorder(line: String): Boolean =
+    line.any(::isBidiControl) || Bidi.requiresBidi(line.toCharArray(), 0, line.length)
 
-private fun appendVisualLine(line: String, defaultRtl: Boolean, out: StringBuilder, styles: List<String>?) {
-    if (styles == null && !needsReorder(line, defaultRtl)) {
+private fun appendVisualLine(line: String, out: StringBuilder, styles: List<String>?) {
+    if (styles == null && !needsReorder(line)) {
         out.append(line)
         return
     }
-    val bidi = Bidi(line, if (defaultRtl) Bidi.DIRECTION_DEFAULT_RIGHT_TO_LEFT else Bidi.DIRECTION_DEFAULT_LEFT_TO_RIGHT)
+    val bidi = Bidi(line, Bidi.DIRECTION_DEFAULT_LEFT_TO_RIGHT)
     val glyphs = Icu.shape(line).takeIf { it.length == line.length } ?: line
     val count = bidi.runCount
     val runs = Array<Any>(count) { it }

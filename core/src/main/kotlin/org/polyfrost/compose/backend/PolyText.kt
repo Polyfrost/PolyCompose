@@ -1589,7 +1589,7 @@ internal class PolyParagraph(private val intr: PolyIntrinsics, maxLines: Int, ov
                 continue
             }
             if (i > segStart) r.text(laidOut(str.substring(segStart, i)), segX, baseline, color, run.font, tracking, skew)
-            pen += run.font.measureTextWidth(str.substring(i, end)) + tracking
+            pen += run.font.measureTextWidth(laidOut(str.substring(i, end))) + tracking
             i = end
             segStart = end
             segX = pen
@@ -1661,7 +1661,7 @@ internal class PolyParagraph(private val intr: PolyIntrinsics, maxLines: Int, ov
             val ch = str.substring(i, i + n)
             if (formatted) r.mcText(prefix + laidOut(ch), cx, top, color, shadow, scale, false, false)
             else r.mcText(laidOut(ch), cx, top, color, shadow, scale, true, false)
-            cx += run.font.measureTextWidth(ch) + letter
+            cx += run.font.measureTextWidth(laidOut(ch)) + letter
             i += n
         }
     }
