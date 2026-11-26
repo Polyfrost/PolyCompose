@@ -305,6 +305,8 @@ tasks.withType<JavaCompile>().configureEach {
         disableAllChecks = true
         error("UnnecessarilyFullyQualified")
     }
+    val sourceSetName = sourceSets.find { it.compileJavaTaskName == name }!!.name
+    finalizedBy("checkstyle${sourceSetName.capitalize()}")
 }
 
 tasks.withType<KotlinCompile>().configureEach {
@@ -314,10 +316,6 @@ tasks.withType<KotlinCompile>().configureEach {
         progressiveMode = true
         freeCompilerArgs.add("-Xdont-warn-on-error-suppression")
     }
-}
-
-tasks.named<JavaCompile>("compileJava") {
-    finalizedBy("checkstyleMain")
 }
 
 tasks.named<Detekt>("detekt") {
