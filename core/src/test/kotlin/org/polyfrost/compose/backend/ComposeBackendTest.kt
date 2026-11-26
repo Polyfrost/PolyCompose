@@ -56,6 +56,7 @@ import org.polyfrost.compose.render.PolyGradient
 import org.polyfrost.compose.render.PolyPath
 import org.polyfrost.compose.render.PolyRenderer
 import org.polyfrost.compose.render.PolyShadow
+import org.polyfrost.compose.render.visualOrder
 
 class ComposeBackendTest {
     private class LogRenderer : PolyRenderer {
@@ -72,7 +73,7 @@ class ComposeBackendTest {
         override fun rectStrokeGradient(x: Float, y: Float, w: Float, h: Float, gradient: PolyGradient, strokeWidth: Float, radius: Float) = log("strokeGradient")
         override fun line(x1: Float, y1: Float, x2: Float, y2: Float, color: Int, strokeWidth: Float) = log("line")
         override fun fillPath(path: PolyPath, color: Int) = log("path #${Integer.toHexString(color)}")
-        override fun text(text: String, x: Float, y: Float, color: Int, font: PolyFont) = log("text '$text' ${x + tx},${y + ty}")
+        override fun text(text: String, x: Float, y: Float, color: Int, font: PolyFont) = log("text '${visualOrder(text)}' ${x + tx},${y + ty}")
         override fun textOutline(text: String, x: Float, y: Float, color: Int, font: PolyFont, width: Float) = log("textOutline")
         override fun mcText(text: String, x: Float, y: Float, color: Int, shadow: Boolean, scale: Float) = log("mcText")
         override fun mcTextOutline(text: String, x: Float, y: Float, color: Int, outlineColor: Int, scale: Float) = log("mcTextOutline")

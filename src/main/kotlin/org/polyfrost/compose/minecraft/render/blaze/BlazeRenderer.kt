@@ -70,7 +70,6 @@ import org.polyfrost.compose.minecraft.mixin.render.GameRendererAccessor
 *///?}
 import net.minecraft.locale.Language
 import net.minecraft.util.ARGB
-import net.minecraft.network.chat.FormattedText
 import org.joml.Matrix3x2f
 import net.minecraft.client.gui.Font
 import net.minecraft.client.gui.font.TextRenderable
@@ -83,6 +82,7 @@ import org.joml.Vector3f
 import org.lwjgl.system.MemoryUtil
 import org.polyfrost.compose.render.BitmapTextureCache
 import org.polyfrost.compose.render.PolyGlyphPage
+import org.polyfrost.compose.render.mcVisualOrder
 import org.polyfrost.compose.render.PolyTessellator
 import org.polyfrost.compose.render.CapturingRenderer
 import org.polyfrost.compose.render.RenderContext
@@ -1556,10 +1556,6 @@ private object GlyphQuads {
 private fun textLines(text: String): List<String> =
     if (text.indexOf('\n') < 0 && text.indexOf('\r') < 0) listOf(text) else text.lines()
 
-private fun needsBidi(c: Char): Boolean =
-    c in '\u0590'..'\u08FF' || c in '\uFB1D'..'\uFDFF' || c in '\uFE70'..'\uFEFF' ||
-        c == '\u200E' || c == '\u200F' || c in '\u202A'..'\u202E' || c in '\u2066'..'\u2069' || c.isSurrogate()
-
 private object TextWidths {
     private val plain = HashMap<String, Int>()
     private val literal = HashMap<String, Int>()
@@ -1574,18 +1570,14 @@ private object TextWidths {
     fun of(font: Font, line: String, literal: Boolean): Int {
         val map = if (literal) this.literal else plain
         if (map.size > 4096) map.clear()
-        return map.getOrPut(line) { if (literal) font.width(visualOrder(line, true)) else font.width(line) }
+        return map.getOrPut(line) { font.width(visualOrder(line, literal)) }
     }
 }
 
 private fun visualOrder(line: String, literal: Boolean = false): FormattedCharSequence {
-    if (literal && '§' in line) return FormattedCharSequence.forward(line, Style.EMPTY)
-    val lang = Language.getInstance()
-    if (!lang.isDefaultRightToLeft && line.none(::needsBidi)) {
-        return if ('§' in line) FormattedCharSequence { sink -> StringDecomposer.iterateFormatted(line, Style.EMPTY, sink) }
-        else FormattedCharSequence.forward(line, Style.EMPTY)
-    }
-    return lang.getVisualOrder(FormattedText.of(line))
+    val visual = mcVisualOrder(line, literal, Language.getInstance().isDefaultRightToLeft)
+    if (literal || '§' !in visual) return FormattedCharSequence.forward(visual, Style.EMPTY)
+    return FormattedCharSequence { sink -> StringDecomposer.iterateFormatted(visual, Style.EMPTY, sink) }
 }
 
 private fun snap(pixel: Float) = pixel.roundToInt().toFloat()

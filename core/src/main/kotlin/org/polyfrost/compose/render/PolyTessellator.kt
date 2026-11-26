@@ -1137,6 +1137,7 @@ public abstract class PolyTessellator : PolyRenderer {
         if (lineCulled(y - font.size * TEXT_ASCENT_REACH, y + font.size * TEXT_DESCENT_REACH, outlinePx)) return
         val r = PolyGlyphPage.rasterizer ?: return
         val face = face(r, font.name) ?: return
+        val text = visualOrder(text)
         glyphRun(r, text, 0, text.length, x, y, color, face, font.size, outlinePx, round, subpixel, letterSpacing, ring)
     }
 
@@ -1294,6 +1295,7 @@ public abstract class PolyTessellator : PolyRenderer {
 
     override fun mcText(text: String, x: Float, y: Float, color: Int, shadow: Boolean, scale: Float, literal: Boolean) {
         if (cpuOnly) return
+        val text = mcVisualOrder(text, literal)
         if (!literal && mcObfuscates(text)) {
             val snap = snapMcX
             return mcAnimated(text, x, y, scale) { it.mcTextDrawn(text, x, y, color, shadow, scale, false, snap, mcStandIns(text)) }
@@ -1427,6 +1429,7 @@ public abstract class PolyTessellator : PolyRenderer {
     override fun mcTextOutline(text: String, x: Float, y: Float, color: Int, outlineColor: Int, scale: Float, literal: Boolean) {
         beginDraw()
         if (cpuOnly) return
+        val text = mcVisualOrder(text, literal)
         if (!literal && mcObfuscates(text)) {
             val snap = snapMcX
             return mcAnimated(text, x, y, scale) { it.mcTextOutlined(text, x, y, color, outlineColor, scale, false, snap, mcStandIns(text)) }
@@ -1437,12 +1440,13 @@ public abstract class PolyTessellator : PolyRenderer {
     private fun mcTextOutlined(text: String, x: Float, y: Float, color: Int, outlineColor: Int, scale: Float, literal: Boolean, snap: Boolean, standIns: IntArray?) {
         val x = if (snap) mcLineLeft(x) else x
         mcOutlineQuads(text, x, y, mulAlpha(outlineColor, state.alpha), scale, literal, standIns)
-        if (standIns == null) mcText(text, x, y, color, false, scale, literal, false) else mcTextDrawn(text, x, y, color, false, scale, false, false, standIns)
+        if (standIns == null) mcText(laidOut(text), x, y, color, false, scale, literal, false) else mcTextDrawn(text, x, y, color, false, scale, false, false, standIns)
     }
 
     internal fun mcTextStroke(text: String, x: Float, y: Float, color: Int, scale: Float, literal: Boolean, snapX: Boolean) {
         if (!layered || !blendSupported(PolyRenderer.BLEND_DST_OUT) || !McGlyphs.available()) return mcText(text, x, y, color, false, scale, literal, snapX)
         if (cpuOnly) return
+        val text = mcVisualOrder(text, literal)
         val standIns = if (!literal && mcObfuscates(text)) mcStandIns(text) else null
         withMcX(snapX) {
             val left = if (snapMcX) mcLineLeft(x) else x

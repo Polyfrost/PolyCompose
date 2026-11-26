@@ -71,6 +71,7 @@ import org.polyfrost.compose.render.PolyImageFill
 import org.polyfrost.compose.render.ChromaBrush
 import org.polyfrost.compose.render.PolyRenderer
 import org.polyfrost.compose.render.PolyTessellator
+import org.polyfrost.compose.render.laidOut
 import org.polyfrost.compose.render.placeBlur
 import org.polyfrost.compose.text.McFonts
 import java.text.Bidi
@@ -1542,12 +1543,12 @@ internal class PolyParagraph(private val intr: PolyIntrinsics, maxLines: Int, ov
         val at = if (scaled) 0f else x
         val tracking = run.tracking / sx
         if (McFonts.isMinecraft(run.font.name)) mcRun(r, run, str, at, baseline, color, tracking, mcShadow)
-        else if (run.bold <= 0f) r.text(str, at, baseline, color, run.font, tracking, run.skew / sx)
+        else if (run.bold <= 0f) r.text(laidOut(str), at, baseline, color, run.font, tracking, run.skew / sx)
         else {
             val translucent = color ushr 24 < 0xFF
             if (translucent) r.saveLayerAlpha((color ushr 24) / 255f)
             val c = if (translucent) color or OPAQUE else color
-            r.text(str, at, baseline, c, run.font, tracking, run.skew / sx)
+            r.text(laidOut(str), at, baseline, c, run.font, tracking, run.skew / sx)
             emboldenPass(r, run, str, at + run.bold / sx, baseline, c, tracking, run.skew / sx)
             if (translucent) r.restore()
         }
@@ -1574,7 +1575,7 @@ internal class PolyParagraph(private val intr: PolyIntrinsics, maxLines: Int, ov
             if (emojiEnd(str, i, face) >= 0) { hasEmoji = true; break }
             i += Character.charCount(str.codePointAt(i))
         }
-        if (!hasEmoji) return r.text(str, x, baseline, color, run.font, tracking, skew)
+        if (!hasEmoji) return r.text(laidOut(str), x, baseline, color, run.font, tracking, skew)
         var segStart = 0
         var segX = x
         var pen = x
@@ -1587,13 +1588,13 @@ internal class PolyParagraph(private val intr: PolyIntrinsics, maxLines: Int, ov
                 i += Character.charCount(cp)
                 continue
             }
-            if (i > segStart) r.text(str.substring(segStart, i), segX, baseline, color, run.font, tracking, skew)
+            if (i > segStart) r.text(laidOut(str.substring(segStart, i)), segX, baseline, color, run.font, tracking, skew)
             pen += run.font.measureTextWidth(str.substring(i, end)) + tracking
             i = end
             segStart = end
             segX = pen
         }
-        if (segStart < str.length) r.text(str.substring(segStart), segX, baseline, color, run.font, tracking, skew)
+        if (segStart < str.length) r.text(laidOut(str.substring(segStart)), segX, baseline, color, run.font, tracking, skew)
     }
 
     private fun drawRun(
@@ -1649,8 +1650,8 @@ internal class PolyParagraph(private val intr: PolyIntrinsics, maxLines: Int, ov
         val prefix = if (run.skew != 0f) (if (bold) "§l§o" else "§o") else if (bold) "§l" else ""
         val formatted = prefix.isNotEmpty() && '§' !in str
         if (letter == 0f) {
-            if (formatted) r.mcText(prefix + str, x, top, color, shadow, scale, false, false)
-            else r.mcText(str, x, top, color, shadow, scale, true, false)
+            if (formatted) r.mcText(prefix + laidOut(str), x, top, color, shadow, scale, false, false)
+            else r.mcText(laidOut(str), x, top, color, shadow, scale, true, false)
             return
         }
         var cx = x
@@ -1658,8 +1659,8 @@ internal class PolyParagraph(private val intr: PolyIntrinsics, maxLines: Int, ov
         while (i < str.length) {
             val n = Character.charCount(str.codePointAt(i))
             val ch = str.substring(i, i + n)
-            if (formatted) r.mcText(prefix + ch, cx, top, color, shadow, scale, false, false)
-            else r.mcText(ch, cx, top, color, shadow, scale, true, false)
+            if (formatted) r.mcText(prefix + laidOut(ch), cx, top, color, shadow, scale, false, false)
+            else r.mcText(laidOut(ch), cx, top, color, shadow, scale, true, false)
             cx += run.font.measureTextWidth(ch) + letter
             i += n
         }

@@ -23,4 +23,25 @@ class BidiTextTest {
         assertEquals("\uFE96\uFEF4\uFE91", visualOrder("بيت"))
         assertEquals("\uFEFB", visualOrder("لا"))
     }
+
+    @Test
+    fun laidOutTextIsDrawnAsGiven() {
+        assertEquals("םולש (abc)", visualOrder("\u202Dםולש (abc)\u202C"))
+        assertEquals(visualOrder("بيت"), visualOrder("\u202D" + visualOrder("بيت") + "\u202C"))
+    }
+
+    @Test
+    fun defaultRightToLeftParagraph() {
+        assertEquals("abc!", visualOrder("abc!", true))
+        assertEquals("?!", visualOrder("!?", true))
+    }
+
+    @Test
+    fun minecraftFormattingFollowsItsCharacters() {
+        assertSame("§cabc", mcVisualOrder("§cabc", false))
+        assertEquals("§r§c§lםול§r§cש§r§c§l", mcVisualOrder("§cש§lלום", false))
+        assertEquals("§r§aםולש§r§a\n§bok", mcVisualOrder("§aשלום\n§bok", false))
+        assertEquals("ab§c", mcVisualOrder("ab§c", true))
+        assertEquals("םו§לש", mcVisualOrder("של§ום", true))
+    }
 }

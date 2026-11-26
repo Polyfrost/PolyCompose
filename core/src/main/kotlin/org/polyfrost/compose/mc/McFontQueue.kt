@@ -1,6 +1,7 @@
 package org.polyfrost.compose.mc
 
 import org.polyfrost.compose.render.PolyGlyphPage
+import org.polyfrost.compose.render.mcVisualOrder
 
 public object McFontQueue {
     public var measureWidth: ((text: String, scale: Float) -> Float)? = null
@@ -13,11 +14,14 @@ public object McFontQueue {
     @Deprecated("Minecraft text is drawn by the active PolyRenderer", level = DeprecationLevel.HIDDEN)
     public var outlineRenderer: ((canvas: Any?, text: String, x: Float, y: Float, color: Int, outlineColor: Int, scale: Float) -> Unit)? = null
 
-    public fun measureTextWidth(text: String, scale: Float): Float =
-        measureWidth?.invoke(text, scale) ?: bundledWidth(text, scale, false)
+    public fun measureTextWidth(text: String, scale: Float): Float {
+        val text = mcVisualOrder(text, false)
+        return measureWidth?.invoke(text, scale) ?: bundledWidth(text, scale, false)
+    }
 
     public fun measureTextWidth(text: String, scale: Float, literal: Boolean): Float {
         if (!literal || '§' !in text) return measureTextWidth(text, scale)
+        val text = mcVisualOrder(text, true)
         return measureLiteralWidth?.invoke(text, scale) ?: bundledWidth(text, scale, true)
     }
 

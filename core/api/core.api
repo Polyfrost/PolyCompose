@@ -1647,7 +1647,12 @@ public final class org/polyfrost/compose/profile/SpikeReason : java/lang/Enum {
 }
 
 public final class org/polyfrost/compose/render/BidiTextKt {
+	public static final fun mcVisualOrder (Ljava/lang/String;Z)Ljava/lang/String;
+	public static final fun mcVisualOrder (Ljava/lang/String;ZZ)Ljava/lang/String;
+	public static synthetic fun mcVisualOrder$default (Ljava/lang/String;ZZILjava/lang/Object;)Ljava/lang/String;
 	public static final fun visualOrder (Ljava/lang/String;)Ljava/lang/String;
+	public static final fun visualOrder (Ljava/lang/String;Z)Ljava/lang/String;
+	public static synthetic fun visualOrder$default (Ljava/lang/String;ZILjava/lang/Object;)Ljava/lang/String;
 }
 
 public abstract interface class org/polyfrost/compose/render/CapturingRenderer {

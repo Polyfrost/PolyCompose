@@ -25,7 +25,7 @@ public data class PolyFont(val name: String, val size: Float) {
             return (if (McFonts.isMinecraft(name)) McFonts.metrics(this) else engine.metrics(this)).also { cachedMetrics = it; metricsRevision = revision }
         }
 
-    public fun measureTextWidth(text: String): Float = if (McFonts.isMinecraft(name)) McFonts.width(this, text) else engine.measureTextWidth(this, text)
+    public fun measureTextWidth(text: String): Float = if (McFonts.isMinecraft(name)) McFonts.width(this, text) else engine.measureTextWidth(this, visualOrder(text))
 
     public companion object {
         @JvmStatic
