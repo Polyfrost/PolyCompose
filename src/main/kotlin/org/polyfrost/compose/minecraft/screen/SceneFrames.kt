@@ -2,6 +2,7 @@
 
 package org.polyfrost.compose.minecraft.screen
 
+import androidx.compose.runtime.snapshots.Snapshot
 import androidx.compose.ui.InternalComposeUiApi
 import androidx.compose.ui.graphics.Canvas
 import androidx.compose.ui.platform.FrameRecomposer
@@ -16,8 +17,10 @@ internal class SceneFrames(private val schedule: () -> Unit) {
 
     val onInvalidation: () -> Unit = { if (!inFrame) schedule() }
 
-    fun hasWork(recomposer: FrameRecomposer, scene: ComposeScene): Boolean =
-        recomposer.hasPendingWork() || scene.hasInvalidations()
+    fun hasWork(recomposer: FrameRecomposer, scene: ComposeScene): Boolean {
+        Snapshot.sendApplyNotifications()
+        return recomposer.hasPendingWork() || scene.hasInvalidations()
+    }
 
     fun advance(recomposer: FrameRecomposer, scene: ComposeScene, nanos: Long, profile: ProfileHost?) {
         inFrame = true
