@@ -36,6 +36,7 @@ classTweaker v1 official
 #accessible field com/mojang/blaze3d/platform/GlStateManager SCISSOR Lcom/mojang/blaze3d/platform/GlStateManager$ScissorState;
 #accessible field com/mojang/blaze3d/platform/GlStateManager COLOR_MASK Lcom/mojang/blaze3d/platform/GlStateManager$ColorMask;
 #accessible field com/mojang/blaze3d/platform/GlStateManager TEXTURES [Lcom/mojang/blaze3d/platform/GlStateManager$TextureState;
+#accessible field com/mojang/blaze3d/platform/GlStateManager activeTexture I
 #?}
 
 #? if >= 1.21.5 && < 1.21.11 {
@@ -53,6 +54,7 @@ classTweaker v1 official
 #accessible field com/mojang/blaze3d/opengl/GlStateManager SCISSOR Lcom/mojang/blaze3d/opengl/GlStateManager$ScissorState;
 #accessible field com/mojang/blaze3d/opengl/GlStateManager COLOR_MASK Lcom/mojang/blaze3d/opengl/GlStateManager$ColorMask;
 #accessible field com/mojang/blaze3d/opengl/GlStateManager TEXTURES [Lcom/mojang/blaze3d/opengl/GlStateManager$TextureState;
+#accessible field com/mojang/blaze3d/opengl/GlStateManager activeTexture I
 #?}
 
 #? if = 1.21.4 {

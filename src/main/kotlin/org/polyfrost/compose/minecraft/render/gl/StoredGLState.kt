@@ -115,20 +115,14 @@ class StoredGLState(val exact: Boolean = false) {
             drawFramebuffer = glGetInteger(GL_DRAW_FRAMEBUFFER_BINDING)
             readFramebuffer = glGetInteger(GL_READ_FRAMEBUFFER_BINDING)
         }
-        activeTexture = if (exact) glGetInteger(GL_ACTIVE_TEXTURE) - GL_TEXTURE0 else cachedActiveTexture()
+        activeTexture = if (exact) glGetInteger(GL_ACTIVE_TEXTURE) - GL_TEXTURE0 else GlStateManager.activeTexture
         program = glGetInteger(GL_CURRENT_PROGRAM)
         arrayBuffer = glGetInteger(GL_ARRAY_BUFFER_BINDING)
         unpackBuffer = glGetInteger(GL_PIXEL_UNPACK_BUFFER_BINDING)
         if (unpackBuffer != 0) glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0)
         glActiveTexture(GL_TEXTURE0)
+        GlStateManager.activeTexture = 0
         if (exact) saveFromGl() else saveFromCache()
-    }
-
-    private fun cachedActiveTexture(): Int {
-        //? if < 1.21.10 {
-        /^return GlStateManager._getActiveTexture() - GL_TEXTURE0
-        ^///?} else
-        //return glGetInteger(GL_ACTIVE_TEXTURE) - GL_TEXTURE0
     }
 
     private fun saveBindingsFromCache(): Boolean {
@@ -202,8 +196,11 @@ class StoredGLState(val exact: Boolean = false) {
         glBindBuffer(GL_ARRAY_BUFFER, arrayBuffer)
         if (unpackBuffer != 0) glBindBuffer(GL_PIXEL_UNPACK_BUFFER, unpackBuffer)
         glActiveTexture(GL_TEXTURE0)
-        glBindTexture(GL_TEXTURE_2D, texture.coerceAtLeast(0))
+        val bound = texture.coerceAtLeast(0)
+        glBindTexture(GL_TEXTURE_2D, bound)
+        GlStateManager.TEXTURES[0].binding = bound
         if (activeTexture != 0) glActiveTexture(GL_TEXTURE0 + activeTexture)
+        GlStateManager.activeTexture = activeTexture
         toggle(GL_BLEND, blend)
         glBlendFuncSeparate(blendSrcRgb, blendDstRgb, blendSrcAlpha, blendDstAlpha)
         toggle(GL_DEPTH_TEST, depthTest)
