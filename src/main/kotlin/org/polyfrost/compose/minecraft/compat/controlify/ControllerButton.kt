@@ -1,5 +1,8 @@
 package org.polyfrost.compose.minecraft.compat.controlify
 
+import org.polyfrost.compose.host.controller.ControllerButton as CoreControllerButton
+
+@Deprecated("Use org.polyfrost.compose.host.controller.ControllerButton")
 enum class ControllerButton {
     NONE,
     A,
@@ -18,4 +21,7 @@ enum class ControllerButton {
     DPAD_DOWN,
     DPAD_LEFT,
     DPAD_RIGHT,
+    ;
+
+    internal fun toCore(): CoreControllerButton = CoreControllerButton.valueOf(name)
 }

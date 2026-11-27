@@ -701,10 +701,12 @@ public class org/polyfrost/compose/host/ComposeOptions {
 	public fun consumeMouse (Ljava/lang/Object;IZ)Z
 	public fun createWheelHandler (Lorg/polyfrost/compose/host/SceneKind;)Lorg/polyfrost/compose/host/WheelHandler;
 	public fun getAnimationScale ()F
+	public fun getFocusRing ()Lorg/polyfrost/compose/host/FocusRingStyle;
 	public fun getMessages ()Lorg/polyfrost/compose/host/HostMessages;
 	public fun getReducedMotion ()Z
 	public fun isCapturingInput ()Z
 	public fun onFrame (Ljava/lang/Object;)Z
+	public fun onInputKind (Ljava/lang/Object;Lorg/polyfrost/compose/host/InputKind;)V
 	public fun onInputKind (Ljava/lang/Object;Z)V
 	public fun onPointer-MZcJ67o (Ljava/lang/Object;Landroidx/compose/ui/geometry/Offset;)V
 	public fun onRemoved (Ljava/lang/Object;)V
@@ -720,6 +722,22 @@ public final class org/polyfrost/compose/host/ComposeOptionsKt {
 
 public final class org/polyfrost/compose/host/ContentScaleKt {
 	public static final fun getLocalContentScale ()Landroidx/compose/runtime/ProvidableCompositionLocal;
+}
+
+public final class org/polyfrost/compose/host/FocusRingStyle {
+	public static final field $stable I
+	public static final field Companion Lorg/polyfrost/compose/host/FocusRingStyle$Companion;
+	public static final field Default Lorg/polyfrost/compose/host/FocusRingStyle;
+	public synthetic fun <init> (JLandroidx/compose/ui/graphics/Color;FFFILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public synthetic fun <init> (JLandroidx/compose/ui/graphics/Color;FFFLkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun getColor-0d7_KjU ()J
+	public final fun getCornerRadius-D9Ej5fM ()F
+	public final fun getGap-D9Ej5fM ()F
+	public final fun getHalo-QN2ZGVo ()Landroidx/compose/ui/graphics/Color;
+	public final fun getWidth-D9Ej5fM ()F
+}
+
+public final class org/polyfrost/compose/host/FocusRingStyle$Companion {
 }
 
 public abstract interface class org/polyfrost/compose/host/GameInputLayer {
@@ -786,6 +804,15 @@ public final class org/polyfrost/compose/host/HostMessages$DefaultImpls {
 	public static fun getVulkanModUnsupported (Lorg/polyfrost/compose/host/HostMessages;)Ljava/lang/String;
 	public static fun gpuAllocFailed (Lorg/polyfrost/compose/host/HostMessages;II)Ljava/lang/String;
 	public static fun unavailable (Lorg/polyfrost/compose/host/HostMessages;Ljava/lang/String;)Ljava/lang/String;
+}
+
+public final class org/polyfrost/compose/host/InputKind : java/lang/Enum {
+	public static final field Controller Lorg/polyfrost/compose/host/InputKind;
+	public static final field Keyboard Lorg/polyfrost/compose/host/InputKind;
+	public static final field Pointer Lorg/polyfrost/compose/host/InputKind;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Lorg/polyfrost/compose/host/InputKind;
+	public static fun values ()[Lorg/polyfrost/compose/host/InputKind;
 }
 
 public final class org/polyfrost/compose/host/KeyState : java/lang/Enum {
@@ -863,6 +890,145 @@ public final class org/polyfrost/compose/host/WheelInput : java/lang/Enum {
 	public static fun getEntries ()Lkotlin/enums/EnumEntries;
 	public static fun valueOf (Ljava/lang/String;)Lorg/polyfrost/compose/host/WheelInput;
 	public static fun values ()[Lorg/polyfrost/compose/host/WheelInput;
+}
+
+public final class org/polyfrost/compose/host/controller/ControllerAction : java/lang/AutoCloseable {
+	public static final field $stable I
+	public fun close ()V
+	public final fun getDefaultButton ()Lorg/polyfrost/compose/host/controller/ControllerButton;
+	public final fun getId ()Ljava/lang/String;
+	public final fun getJustPressed ()Z
+	public final fun getName ()Ljava/lang/String;
+	public final fun isActive ()Z
+	public final fun isPressed ()Z
+	public final fun isRebindable ()Z
+	public final fun onPress (Ljava/lang/Runnable;)Ljava/lang/AutoCloseable;
+}
+
+public final class org/polyfrost/compose/host/controller/ControllerActionSpec {
+	public static final field $stable I
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;Lorg/polyfrost/compose/host/controller/ControllerButton;Ljava/lang/String;Z)V
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;Lorg/polyfrost/compose/host/controller/ControllerButton;Ljava/lang/String;ZLorg/polyfrost/compose/host/controller/ControllerContext;)V
+	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;Lorg/polyfrost/compose/host/controller/ControllerButton;Ljava/lang/String;ZLorg/polyfrost/compose/host/controller/ControllerContext;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun getCategory ()Ljava/lang/String;
+	public final fun getContext ()Lorg/polyfrost/compose/host/controller/ControllerContext;
+	public final fun getDefaultButton ()Lorg/polyfrost/compose/host/controller/ControllerButton;
+	public final fun getId ()Ljava/lang/String;
+	public final fun getName ()Ljava/lang/String;
+	public final fun getRadial ()Z
+}
+
+public final class org/polyfrost/compose/host/controller/ControllerArrowsKt {
+	public static final fun controllerArrows (Landroidx/compose/ui/Modifier;Lorg/polyfrost/compose/host/controller/ControllerAxes;)Landroidx/compose/ui/Modifier;
+	public static synthetic fun controllerArrows$default (Landroidx/compose/ui/Modifier;Lorg/polyfrost/compose/host/controller/ControllerAxes;ILjava/lang/Object;)Landroidx/compose/ui/Modifier;
+	public static final fun controllerFocusScope (Landroidx/compose/ui/Modifier;Z)Landroidx/compose/ui/Modifier;
+	public static synthetic fun controllerFocusScope$default (Landroidx/compose/ui/Modifier;ZILjava/lang/Object;)Landroidx/compose/ui/Modifier;
+	public static final fun hidesFocusRing (Landroidx/compose/ui/Modifier;)Landroidx/compose/ui/Modifier;
+}
+
+public final class org/polyfrost/compose/host/controller/ControllerAxes : java/lang/Enum {
+	public static final field Both Lorg/polyfrost/compose/host/controller/ControllerAxes;
+	public static final field Horizontal Lorg/polyfrost/compose/host/controller/ControllerAxes;
+	public static final field Vertical Lorg/polyfrost/compose/host/controller/ControllerAxes;
+	public final fun covers-3ESFkO8 (I)Z
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Lorg/polyfrost/compose/host/controller/ControllerAxes;
+	public static fun values ()[Lorg/polyfrost/compose/host/controller/ControllerAxes;
+}
+
+public final class org/polyfrost/compose/host/controller/ControllerButton : java/lang/Enum {
+	public static final field A Lorg/polyfrost/compose/host/controller/ControllerButton;
+	public static final field B Lorg/polyfrost/compose/host/controller/ControllerButton;
+	public static final field BACK Lorg/polyfrost/compose/host/controller/ControllerButton;
+	public static final field DPAD_DOWN Lorg/polyfrost/compose/host/controller/ControllerButton;
+	public static final field DPAD_LEFT Lorg/polyfrost/compose/host/controller/ControllerButton;
+	public static final field DPAD_RIGHT Lorg/polyfrost/compose/host/controller/ControllerButton;
+	public static final field DPAD_UP Lorg/polyfrost/compose/host/controller/ControllerButton;
+	public static final field LEFT_BUMPER Lorg/polyfrost/compose/host/controller/ControllerButton;
+	public static final field LEFT_STICK Lorg/polyfrost/compose/host/controller/ControllerButton;
+	public static final field LEFT_TRIGGER Lorg/polyfrost/compose/host/controller/ControllerButton;
+	public static final field NONE Lorg/polyfrost/compose/host/controller/ControllerButton;
+	public static final field RIGHT_BUMPER Lorg/polyfrost/compose/host/controller/ControllerButton;
+	public static final field RIGHT_STICK Lorg/polyfrost/compose/host/controller/ControllerButton;
+	public static final field RIGHT_TRIGGER Lorg/polyfrost/compose/host/controller/ControllerButton;
+	public static final field START Lorg/polyfrost/compose/host/controller/ControllerButton;
+	public static final field X Lorg/polyfrost/compose/host/controller/ControllerButton;
+	public static final field Y Lorg/polyfrost/compose/host/controller/ControllerButton;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Lorg/polyfrost/compose/host/controller/ControllerButton;
+	public static fun values ()[Lorg/polyfrost/compose/host/controller/ControllerButton;
+}
+
+public final class org/polyfrost/compose/host/controller/ControllerContext : java/lang/Enum {
+	public static final field Anywhere Lorg/polyfrost/compose/host/controller/ControllerContext;
+	public static final field Gameplay Lorg/polyfrost/compose/host/controller/ControllerContext;
+	public static final field Screens Lorg/polyfrost/compose/host/controller/ControllerContext;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Lorg/polyfrost/compose/host/controller/ControllerContext;
+	public static fun values ()[Lorg/polyfrost/compose/host/controller/ControllerContext;
+}
+
+public final class org/polyfrost/compose/host/controller/ControllerGuide : java/lang/Enum {
+	public static final field BottomCenter Lorg/polyfrost/compose/host/controller/ControllerGuide;
+	public static final field BottomLeft Lorg/polyfrost/compose/host/controller/ControllerGuide;
+	public static final field BottomRight Lorg/polyfrost/compose/host/controller/ControllerGuide;
+	public static final field Hidden Lorg/polyfrost/compose/host/controller/ControllerGuide;
+	public static final field TopLeft Lorg/polyfrost/compose/host/controller/ControllerGuide;
+	public static final field TopRight Lorg/polyfrost/compose/host/controller/ControllerGuide;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Lorg/polyfrost/compose/host/controller/ControllerGuide;
+	public static fun values ()[Lorg/polyfrost/compose/host/controller/ControllerGuide;
+}
+
+public final class org/polyfrost/compose/host/controller/ControllerHint {
+	public static final field $stable I
+	public fun <init> (Lorg/polyfrost/compose/host/controller/ControllerButton;Ljava/lang/String;)V
+	public final fun getButton ()Lorg/polyfrost/compose/host/controller/ControllerButton;
+	public final fun getLabel ()Ljava/lang/String;
+}
+
+public final class org/polyfrost/compose/host/controller/ControllerPanKt {
+	public static final fun controllerPan (Landroidx/compose/ui/Modifier;ZLkotlin/jvm/functions/Function1;)Landroidx/compose/ui/Modifier;
+	public static synthetic fun controllerPan$default (Landroidx/compose/ui/Modifier;ZLkotlin/jvm/functions/Function1;ILjava/lang/Object;)Landroidx/compose/ui/Modifier;
+}
+
+public final class org/polyfrost/compose/host/controller/ControllerTargetsKt {
+	public static final fun controllerAction (Landroidx/compose/ui/Modifier;Lorg/polyfrost/compose/host/controller/ControllerButton;Ljava/lang/String;ZZLkotlin/jvm/functions/Function0;)Landroidx/compose/ui/Modifier;
+	public static synthetic fun controllerAction$default (Landroidx/compose/ui/Modifier;Lorg/polyfrost/compose/host/controller/ControllerButton;Ljava/lang/String;ZZLkotlin/jvm/functions/Function0;ILjava/lang/Object;)Landroidx/compose/ui/Modifier;
+	public static final fun getLocalControllerTargets ()Landroidx/compose/runtime/ProvidableCompositionLocal;
+}
+
+public final class org/polyfrost/compose/host/controller/Controllers {
+	public static final field $stable I
+	public static final field INSTANCE Lorg/polyfrost/compose/host/controller/Controllers;
+	public static final fun captureGameplay ()Ljava/lang/AutoCloseable;
+	public static final fun captureLook ()Ljava/lang/AutoCloseable;
+	public final fun enterDispatch ()V
+	public final fun exitDispatch ()V
+	public static final fun getLeftStick-F1C5BW0 ()J
+	public static final fun getRightStick-F1C5BW0 ()J
+	public static final fun isActive ()Z
+	public static final fun isAvailable ()Z
+	public static final fun isDispatching ()Z
+	public static final fun isGameplayCaptured ()Z
+	public static final fun isLookCaptured ()Z
+	public static final fun register (Ljava/lang/String;Ljava/lang/String;)Lorg/polyfrost/compose/host/controller/ControllerAction;
+	public static final fun register (Ljava/lang/String;Ljava/lang/String;Lorg/polyfrost/compose/host/controller/ControllerButton;)Lorg/polyfrost/compose/host/controller/ControllerAction;
+	public static final fun register (Ljava/lang/String;Ljava/lang/String;Lorg/polyfrost/compose/host/controller/ControllerButton;Ljava/lang/String;)Lorg/polyfrost/compose/host/controller/ControllerAction;
+	public static final fun register (Ljava/lang/String;Ljava/lang/String;Lorg/polyfrost/compose/host/controller/ControllerButton;Ljava/lang/String;Z)Lorg/polyfrost/compose/host/controller/ControllerAction;
+	public static final fun register (Ljava/lang/String;Ljava/lang/String;Lorg/polyfrost/compose/host/controller/ControllerButton;Ljava/lang/String;ZLorg/polyfrost/compose/host/controller/ControllerContext;)Lorg/polyfrost/compose/host/controller/ControllerAction;
+	public static synthetic fun register$default (Ljava/lang/String;Ljava/lang/String;Lorg/polyfrost/compose/host/controller/ControllerButton;Ljava/lang/String;ZLorg/polyfrost/compose/host/controller/ControllerContext;ILjava/lang/Object;)Lorg/polyfrost/compose/host/controller/ControllerAction;
+}
+
+public final class org/polyfrost/compose/host/controller/ControllersKt {
+	public static final fun isFromController-ZmokQxo (Ljava/lang/Object;)Z
+}
+
+public final class org/polyfrost/compose/host/controller/FocusEntryKt {
+	public static final fun focusEntry (Landroidx/compose/ui/Modifier;Landroidx/compose/ui/focus/FocusRequester;Z)Landroidx/compose/ui/Modifier;
+	public static synthetic fun focusEntry$default (Landroidx/compose/ui/Modifier;Landroidx/compose/ui/focus/FocusRequester;ZILjava/lang/Object;)Landroidx/compose/ui/Modifier;
+	public static final fun focusWhenShown (Landroidx/compose/ui/Modifier;ZLjava/lang/Object;)Landroidx/compose/ui/Modifier;
+	public static synthetic fun focusWhenShown$default (Landroidx/compose/ui/Modifier;ZLjava/lang/Object;ILjava/lang/Object;)Landroidx/compose/ui/Modifier;
 }
 
 public final class org/polyfrost/compose/layout/ExtensionsKt {

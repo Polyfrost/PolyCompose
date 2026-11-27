@@ -25,7 +25,13 @@ public open class ComposeOptions {
 
     public open fun onInputKind(owner: Any, keyboard: Boolean) {}
 
+    public open fun onInputKind(owner: Any, kind: InputKind) {
+        onInputKind(owner, kind != InputKind.Pointer)
+    }
+
     public open fun onRemoved(owner: Any) {}
+
+    public open val focusRing: FocusRingStyle get() = FocusRingStyle.Default
 
     public open val isCapturingInput: Boolean get() = false
 

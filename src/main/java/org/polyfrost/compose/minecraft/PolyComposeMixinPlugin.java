@@ -118,6 +118,10 @@ public class PolyComposeMixinPlugin implements IMixinConfigPlugin {
         //if (FabricLoader.getInstance().isModLoaded("blur")) mixins.add("compat.Mixin_LegacyGuiBlur");
         //? if > 1.8.9
         if (FabricLoader.getInstance().isModLoaded("controlify")) mixins.add("compat.Mixin_ControlifyBack");
+        //? if > 1.8.9
+        if (FabricLoader.getInstance().isModLoaded("controlify")) mixins.add("compat.Mixin_ControlifyGameplayBindings");
+        //? if > 1.8.9
+        if (FabricLoader.getInstance().isModLoaded("controlify")) mixins.add("compat.Mixin_ControlifyGameplayKeys");
         //? if >= 26.2
         if (FabricLoader.getInstance().isModLoaded("immediatelyfast")) mixins.add("compat.Mixin_ImmediatelyFastItemAtlas");
         //? if >= 1.21.11 {

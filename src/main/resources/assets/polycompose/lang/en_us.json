@@ -17,5 +17,15 @@
   "polycompose.profiler.spikes.off": "Spike capture off.",
   "polycompose.profiler.spike": "Slow frame: %s ms in %s. Saved %s",
   "polycompose.profiler.reset": "Profiler data cleared.",
-  "polycompose.profiler.invalid": "%s isn't a valid number."
+  "polycompose.profiler.invalid": "%s isn't a valid number.",
+  "polycompose.controller.category": "Menus (PolyCompose)",
+  "polycompose.controller.select": "Select",
+  "polycompose.controller.scroll": "Scroll",
+  "polycompose.controller.cursor": "Cursor",
+  "polycompose.controller.options": "Options",
+  "polycompose.binding.gui_left_trigger": "Menu: previous item",
+  "polycompose.binding.gui_right_trigger": "Menu: next item",
+  "polycompose.binding.gui_right_stick": "Menu: right stick click",
+  "polycompose.binding.gui_start": "Menu: start",
+  "polycompose.binding.gui_back": "Menu: view"
 }
