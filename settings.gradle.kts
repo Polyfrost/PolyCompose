@@ -6,7 +6,7 @@ pluginManagement {
         maven("https://maven.fabricmc.net/")
         maven("https://maven.ornithemc.net/releases")
         maven("https://repo.polyfrost.org/releases")
-        mavenCentral()
+        maven("https://maven-central.storage-download.googleapis.com/maven2/")
     }
 
     plugins {
@@ -27,7 +27,7 @@ plugins {
 dependencyResolutionManagement {
     repositories {
         mavenLocal()
-        mavenCentral()
+        maven("https://maven-central.storage-download.googleapis.com/maven2/")
         maven("https://maven.fabricmc.net/")
         maven("https://maven.ornithemc.net/releases")
         maven("https://repo.polyfrost.org/releases")

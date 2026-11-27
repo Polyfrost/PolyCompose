@@ -85,7 +85,7 @@ base.archivesName = "$modId-$node"
 repositories {
     if (isOrnithe) {
         exclusiveContent {
-            forRepository { mavenCentral() }
+            forRepository { maven("https://maven-central.storage-download.googleapis.com/maven2/") }
             filter { includeGroup("org.lwjgl") }
         }
         maven("https://maven.cloverclient.com/releases") {
@@ -96,7 +96,7 @@ repositories {
         }
     }
     mavenLocal()
-    mavenCentral()
+    maven("https://maven-central.storage-download.googleapis.com/maven2/")
     google()
     maven("https://repo.polyfrost.org/releases")
     maven("https://repo.polyfrost.org/snapshots")

@@ -18,7 +18,7 @@ import java.util.zip.ZipFile
 import java.util.zip.ZipOutputStream
 
 buildscript {
-    repositories { mavenCentral() }
+    repositories { maven("https://maven-central.storage-download.googleapis.com/maven2/") }
     dependencies { classpath("org.ow2.asm:asm-commons:9.10.1") }
 }
 
