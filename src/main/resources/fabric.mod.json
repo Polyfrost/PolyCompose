@@ -33,6 +33,7 @@
     "mixins.polycompose.json",
     "mixins.polycompose.optional.json"
   ],
+  "provides": ["compose-multiplatform"],
   "depends": {
     "fabricloader": ">=${loader_version}",
     "minecraft": "${fabric_mc_version}",
@@ -40,8 +41,7 @@
     "fabric-language-kotlin": ">=${flk_version}"
   },
   "breaks": {
-    "oneconfig": "<1.9.0",
-    "compose-multiplatform": "*"
+    "oneconfig": "<1.9.0"
   },
   "custom": {
     "modmenu": {
