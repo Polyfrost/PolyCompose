@@ -19,6 +19,8 @@ object ArgentumGlyphs {
             runCatching { Class.forName("dev.rdh.argentum.api.render.text.TextGlyphs", false, ArgentumGlyphs::class.java.classLoader) }.isSuccess
     }
 
+    private var argb = IntArray(0)
+
     private val MISSING = McGlyph(null, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f)
 
     // Argentum loads its fonts lazily and isn't thread-safe, so glyphs are only resolved on the render thread
@@ -49,21 +51,23 @@ object ArgentumGlyphs {
         }
 
         private fun resolve(cp: Int): McGlyph {
-            val g = TextGlyphs.glyph(renderer, cp)?.let(::convert) ?: MISSING
+            val g = TextGlyphs.glyph(renderer, cp)?.let { convert(renderer, cp, it) } ?: MISSING
             return glyphs.putIfAbsent(cp, g) ?: g
         }
 
         fun obfuscate(cp: Int): Int = if (RenderThread.isCurrent()) TextGlyphs.obfuscate(renderer, cp, ThreadLocalRandom.current()) else cp
     }
 
-    private fun convert(info: GlyphInfo): McGlyph {
+    private fun convert(renderer: TextRenderer, cp: Int, info: GlyphInfo): McGlyph {
         val boldAdvance = if (info.advance > 0f) 1f else 0f
         val shadow = if (info.boldShift < 1f) 1f - info.boldShift else 1f
         val width = info.width.coerceAtLeast(0f)
-        val argb = info.argb
-        if (argb == null || width == 0f || info.imageWidth == 0 || info.imageHeight == 0) return McGlyph(null, 0f, 0f, 0f, 0f, info.top, width, info.height, info.advance, info.boldShift, boldAdvance, shadow)
         val w = info.imageWidth
         val h = info.imageHeight
+        if (width == 0f || w == 0 || h == 0) return blank(info, width, boldAdvance, shadow)
+        if (argb.size < w * h) argb = IntArray(w * h)
+        val argb = argb
+        if (!TextGlyphs.pixels(renderer, cp, argb)) return blank(info, width, boldAdvance, shadow)
         val bw = w + 2
         val bh = h + 2
         val pixels = ByteArray(bw * bh * 4)
@@ -81,5 +85,8 @@ object ArgentumGlyphs {
             info.top, width, info.height, info.advance, info.boldShift, boldAdvance, shadow,
         )
     }
+
+    private fun blank(info: GlyphInfo, width: Float, boldAdvance: Float, shadow: Float) =
+        McGlyph(null, 0f, 0f, 0f, 0f, info.top, width, info.height, info.advance, info.boldShift, boldAdvance, shadow)
 }
 *///?}
