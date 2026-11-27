@@ -32,6 +32,7 @@ mod.mc_releases = "1.8.9"
 feather_build = 2
 deps.osl = "0.21.1"
 deps.pylon = "0.2.6"
+deps.argentum = "1.0.2+7bbcae4"
 
 ["1.21.1"]
 mod.mc_compat = ">=1.21.1 <=1.21.1"
