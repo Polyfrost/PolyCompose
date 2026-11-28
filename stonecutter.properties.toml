@@ -1,6 +1,6 @@
 mod.name = "PolyCompose"
 mod.id = "polycompose"
-mod.version = "3.0.9"
+mod.version = "3.0.10"
 mod.group = "org.polyfrost"
 mod.description = "Library mod for building Minecraft screens and overlays with Compose."
 

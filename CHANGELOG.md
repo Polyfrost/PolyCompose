@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased]
+## [3.0.10]
 
 - PolyCompose now seamlessly replaces the old Compose Multiplatform instead of conflicting with it, to fix issues for people who still have both
 
