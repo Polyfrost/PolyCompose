@@ -30,6 +30,11 @@ public open class PolyModifier internal constructor(
         val g = style.gap
         style.width = PolySize.Wrap
         style.height = PolySize.Wrap
+        style.minWidth = Float.NaN
+        style.maxWidth = Float.NaN
+        style.minHeight = Float.NaN
+        style.maxHeight = Float.NaN
+        style.fitContent = false
         style.align = PolyAlign.TopLeft
         style.padding = NO_INSETS
         style.margin = NO_INSETS
@@ -58,6 +63,9 @@ public fun PolyModifier.width(w: Float): PolyModifier = op("width", w) { width =
 public fun PolyModifier.width(w: PolySize): PolyModifier = op("width", w) { width = w }
 public fun PolyModifier.height(h: Float): PolyModifier = op("height", h) { height = PolySize.Px(h) }
 public fun PolyModifier.height(h: PolySize): PolyModifier = op("height", h) { height = h }
+public fun PolyModifier.widthIn(min: Float = Float.NaN, max: Float = Float.NaN): PolyModifier = op("widthIn", min, max) { minWidth = min; maxWidth = max }
+public fun PolyModifier.heightIn(min: Float = Float.NaN, max: Float = Float.NaN): PolyModifier = op("heightIn", min, max) { minHeight = min; maxHeight = max }
+public fun PolyModifier.fitContent(): PolyModifier = op("fitContent") { fitContent = true }
 public fun PolyModifier.fillWidth(): PolyModifier = op("fillWidth") { width = PolySize.Fill }
 public fun PolyModifier.fillHeight(): PolyModifier = op("fillHeight") { height = PolySize.Fill }
 public fun PolyModifier.fill(): PolyModifier = op("fill") { width = PolySize.Fill; height = PolySize.Fill }

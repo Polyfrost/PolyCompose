@@ -14,8 +14,8 @@ public class CanvasNode : PolyNode() {
         val pad = style.padding
         val x = x + pad.left
         val y = y + pad.top
-        val w = (width - pad.horizontal).coerceAtLeast(0f)
-        val h = (height - pad.vertical).coerceAtLeast(0f)
+        val w = (width - pad.horizontal).coerceAtLeast(0f) / contentScale
+        val h = (height - pad.vertical).coerceAtLeast(0f) / contentScale
         if (!live) return draw(ctx, x, y, w, h)
         ctx.renderer.live { draw(liveContext(it), x, y, w, h) }
     }

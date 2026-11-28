@@ -13,6 +13,7 @@ public open class PolyNode {
     public var y: Float = 0f
     public var width: Float = 0f
     public var height: Float = 0f
+    public var contentScale: Float = 1f
 
     internal var intrinsicWidth: Float = -1f
     internal var intrinsicHeight: Float = -1f
@@ -99,6 +100,15 @@ public open class PolyNode {
             val r = s.radius
             if (r > 0f) ctx.clipRRect(x, y, width, height, r) else ctx.clipRect(x, y, width, height)
         }
+        val scaled = contentScale != 1f
+        if (scaled) {
+            val px = x + s.padding.left
+            val py = y + s.padding.top
+            ctx.save()
+            ctx.translate(px, py)
+            ctx.scale(contentScale, contentScale)
+            ctx.translate(-px, -py)
+        }
         renderContent(ctx)
         val kids = children
         for (i in kids.indices) {
@@ -126,6 +136,7 @@ public open class PolyNode {
                 }
             }
         }
+        if (scaled) ctx.restore()
         if (clip) ctx.restore()
     }
 
